@@ -1,0 +1,5 @@
+title,company,location,employment_type,experience_years_min,required_skills,preferred_skills,description,source_url
+AI Data Engineer,Fixture Labs,Ho Chi Minh City,Full-time,1,Python;postgres,fast api,Build reliable Python data services backed by Postgres.,https://example.com/jobs/fixture-ai-data-engineer
+Duplicate AI Data Engineer,Fixture Labs,Ho Chi Minh City,Full-time,1,Python;PostgreSQL,,This record intentionally repeats the source URL.,https://example.com/jobs/fixture-ai-data-engineer
+,Broken Fixture Company,,,,Python,,This record intentionally has no title.,https://example.com/jobs/invalid-missing-title
+Computer Vision Intern,Vision Fixture Studio,Hanoi,Internship,0,cv;python,docker,Prototype computer vision models and package demos.,

@@ -1,0 +1,42 @@
+[
+  {
+    "title": "AI Data Engineer",
+    "company": "Fixture Labs",
+    "location": "Ho Chi Minh City",
+    "employment_type": "Full-time",
+    "experience_years_min": 1,
+    "required_skills": ["Python", "postgres"],
+    "preferred_skills": ["fast api"],
+    "description": "Build reliable Python data services backed by Postgres.",
+    "source_url": "https://example.com/jobs/fixture-ai-data-engineer"
+  },
+  {
+    "title": "Duplicate AI Data Engineer",
+    "company": "Fixture Labs",
+    "location": "Ho Chi Minh City",
+    "employment_type": "Full-time",
+    "experience_years_min": 1,
+    "required_skills": ["Python", "PostgreSQL"],
+    "preferred_skills": [],
+    "description": "This record intentionally repeats the source URL.",
+    "source_url": "https://example.com/jobs/fixture-ai-data-engineer"
+  },
+  {
+    "company": "Broken Fixture Company",
+    "required_skills": ["Python"],
+    "preferred_skills": [],
+    "description": "This record intentionally has no title.",
+    "source_url": "https://example.com/jobs/invalid-missing-title"
+  },
+  {
+    "title": "Computer Vision Intern",
+    "company": "Vision Fixture Studio",
+    "location": "Hanoi",
+    "employment_type": "Internship",
+    "experience_years_min": 0,
+    "required_skills": ["cv", "python"],
+    "preferred_skills": ["docker"],
+    "description": "Prototype computer vision models and package demos.",
+    "source_url": null
+  }
+]
