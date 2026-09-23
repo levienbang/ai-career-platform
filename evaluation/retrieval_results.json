@@ -1,0 +1,282 @@
+{
+  "keyword": {
+    "recall_at_5": 0.9166666666666666,
+    "mean_latency_ms": 8.165607584184423,
+    "median_latency_ms": 8.15893750404939
+  },
+  "dense": {
+    "recall_at_5": 1.0,
+    "mean_latency_ms": 505.01695849743555,
+    "median_latency_ms": 489.78564600110985
+  },
+  "case_count": 12,
+  "cases": [
+    {
+      "query": "Python Docker internship for a fresher",
+      "relevant_job_ids": [
+        1,
+        8
+      ],
+      "keyword_job_ids": [
+        6,
+        5,
+        7,
+        16,
+        4
+      ],
+      "dense_job_ids": [
+        1,
+        16,
+        8,
+        5,
+        12
+      ],
+      "keyword_recall_at_5": 0.0,
+      "dense_recall_at_5": 1.0
+    },
+    {
+      "query": "computer vision role with no production experience",
+      "relevant_job_ids": [
+        8,
+        9
+      ],
+      "keyword_job_ids": [
+        9,
+        8,
+        4,
+        11,
+        1
+      ],
+      "dense_job_ids": [
+        9,
+        4,
+        8,
+        16,
+        12
+      ],
+      "keyword_recall_at_5": 1.0,
+      "dense_recall_at_5": 1.0
+    },
+    {
+      "query": "remote language model and conversational AI job",
+      "relevant_job_ids": [
+        10
+      ],
+      "keyword_job_ids": [
+        10,
+        6,
+        16,
+        12,
+        5
+      ],
+      "dense_job_ids": [
+        10,
+        6,
+        12,
+        16,
+        2
+      ],
+      "keyword_recall_at_5": 1.0,
+      "dense_recall_at_5": 1.0
+    },
+    {
+      "query": "backend APIs with PostgreSQL in Da Nang",
+      "relevant_job_ids": [
+        11
+      ],
+      "keyword_job_ids": [
+        7,
+        11,
+        6,
+        5,
+        16
+      ],
+      "dense_job_ids": [
+        11,
+        17,
+        3,
+        7,
+        6
+      ],
+      "keyword_recall_at_5": 1.0,
+      "dense_recall_at_5": 1.0
+    },
+    {
+      "query": "deploy and monitor containerized machine learning services",
+      "relevant_job_ids": [
+        12
+      ],
+      "keyword_job_ids": [
+        12,
+        7,
+        15,
+        2,
+        14
+      ],
+      "dense_job_ids": [
+        12,
+        7,
+        14,
+        1,
+        2
+      ],
+      "keyword_recall_at_5": 1.0,
+      "dense_recall_at_5": 1.0
+    },
+    {
+      "query": "data analysis and relational datasets in Ho Chi Minh City",
+      "relevant_job_ids": [
+        13
+      ],
+      "keyword_job_ids": [
+        13,
+        8,
+        5,
+        3,
+        1
+      ],
+      "dense_job_ids": [
+        13,
+        3,
+        17,
+        7,
+        8
+      ],
+      "keyword_recall_at_5": 1.0,
+      "dense_recall_at_5": 1.0
+    },
+    {
+      "query": "experienced machine learning API engineer in Hanoi",
+      "relevant_job_ids": [
+        2
+      ],
+      "keyword_job_ids": [
+        7,
+        2,
+        15,
+        12,
+        5
+      ],
+      "dense_job_ids": [
+        2,
+        15,
+        5,
+        14,
+        3
+      ],
+      "keyword_recall_at_5": 1.0,
+      "dense_recall_at_5": 1.0
+    },
+    {
+      "query": "remote backend internship building web APIs",
+      "relevant_job_ids": [
+        16
+      ],
+      "keyword_job_ids": [
+        16,
+        6,
+        11,
+        5,
+        10
+      ],
+      "dense_job_ids": [
+        16,
+        6,
+        5,
+        1,
+        11
+      ],
+      "keyword_recall_at_5": 1.0,
+      "dense_recall_at_5": 1.0
+    },
+    {
+      "query": "AI infrastructure platform with containers and databases",
+      "relevant_job_ids": [
+        14
+      ],
+      "keyword_job_ids": [
+        14,
+        1,
+        6,
+        8,
+        7
+      ],
+      "dense_job_ids": [
+        14,
+        1,
+        12,
+        5,
+        6
+      ],
+      "keyword_recall_at_5": 1.0,
+      "dense_recall_at_5": 1.0
+    },
+    {
+      "query": "machine learning research internship in Hanoi",
+      "relevant_job_ids": [
+        15
+      ],
+      "keyword_job_ids": [
+        15,
+        7,
+        2,
+        12,
+        5
+      ],
+      "dense_job_ids": [
+        15,
+        4,
+        2,
+        8,
+        1
+      ],
+      "keyword_recall_at_5": 1.0,
+      "dense_recall_at_5": 1.0
+    },
+    {
+      "query": "relational database data pipelines in Hanoi",
+      "relevant_job_ids": [
+        17
+      ],
+      "keyword_job_ids": [
+        17,
+        13,
+        11,
+        7,
+        6
+      ],
+      "dense_job_ids": [
+        17,
+        3,
+        13,
+        7,
+        11
+      ],
+      "keyword_recall_at_5": 1.0,
+      "dense_recall_at_5": 1.0
+    },
+    {
+      "query": "entry level image recognition and video analysis",
+      "relevant_job_ids": [
+        8,
+        9
+      ],
+      "keyword_job_ids": [
+        8,
+        9,
+        5,
+        7,
+        6
+      ],
+      "dense_job_ids": [
+        9,
+        8,
+        4,
+        1,
+        16
+      ],
+      "keyword_recall_at_5": 1.0,
+      "dense_recall_at_5": 1.0
+    }
+  ]
+}

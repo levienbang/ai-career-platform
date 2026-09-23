@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -31,6 +33,23 @@ class JobRepository:
             .offset(offset)
             .limit(limit)
         )
+        return list(self.session.scalars(statement))
+
+    def list_all(self) -> list[Job]:
+        statement = (
+            select(Job)
+            .options(
+                selectinload(Job.company),
+                selectinload(Job.skills).selectinload(JobSkill.skill),
+            )
+            .order_by(Job.id)
+        )
+        return list(self.session.scalars(statement))
+
+    def get_by_source_urls(self, source_urls: list[str]) -> list[Job]:
+        if not source_urls:
+            return []
+        statement = select(Job).where(Job.source_url.in_(source_urls)).order_by(Job.id)
         return list(self.session.scalars(statement))
 
     def get(self, job_id: int) -> Job | None:

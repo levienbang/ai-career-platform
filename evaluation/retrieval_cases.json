@@ -1,0 +1,59 @@
+[
+  {
+    "query": "Python Docker internship for a fresher",
+    "relevant_source_urls": [
+      "https://example.com/jobs/ai-engineer-intern",
+      "https://example.com/eval/computer-vision-intern"
+    ]
+  },
+  {
+    "query": "computer vision role with no production experience",
+    "relevant_source_urls": [
+      "https://example.com/eval/computer-vision-intern",
+      "https://example.com/eval/junior-computer-vision"
+    ]
+  },
+  {
+    "query": "remote language model and conversational AI job",
+    "relevant_source_urls": ["https://example.com/eval/nlp-engineer"]
+  },
+  {
+    "query": "backend APIs with PostgreSQL in Da Nang",
+    "relevant_source_urls": ["https://example.com/eval/ai-backend-engineer"]
+  },
+  {
+    "query": "deploy and monitor containerized machine learning services",
+    "relevant_source_urls": ["https://example.com/eval/mlops-engineer"]
+  },
+  {
+    "query": "data analysis and relational datasets in Ho Chi Minh City",
+    "relevant_source_urls": ["https://example.com/eval/data-scientist"]
+  },
+  {
+    "query": "experienced machine learning API engineer in Hanoi",
+    "relevant_source_urls": ["https://example.com/jobs/ml-engineer"]
+  },
+  {
+    "query": "remote backend internship building web APIs",
+    "relevant_source_urls": ["https://example.com/eval/backend-intern"]
+  },
+  {
+    "query": "AI infrastructure platform with containers and databases",
+    "relevant_source_urls": ["https://example.com/eval/ai-platform-engineer"]
+  },
+  {
+    "query": "machine learning research internship in Hanoi",
+    "relevant_source_urls": ["https://example.com/eval/ml-research-intern"]
+  },
+  {
+    "query": "relational database data pipelines in Hanoi",
+    "relevant_source_urls": ["https://example.com/eval/postgresql-data-engineer"]
+  },
+  {
+    "query": "entry level image recognition and video analysis",
+    "relevant_source_urls": [
+      "https://example.com/eval/computer-vision-intern",
+      "https://example.com/eval/junior-computer-vision"
+    ]
+  }
+]

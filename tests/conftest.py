@@ -1,5 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
+from qdrant_client import QdrantClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -9,6 +10,28 @@ from app.db.models import Skill, SkillAlias
 from app.db.session import get_db
 from app.main import app
 from app.schemas.ingestion import JobExtraction, RawJobRecord
+
+
+class FakeEmbeddingProvider:
+    dimensions = 4
+
+    @staticmethod
+    def _vector(text: str) -> list[float]:
+        lowered = text.casefold()
+        vector = [
+            float(sum(term in lowered for term in ("vision", "image", "video"))),
+            float(sum(term in lowered for term in ("backend", "api", "fastapi"))),
+            float(sum(term in lowered for term in ("docker", "deploy", "container"))),
+            float(sum(term in lowered for term in ("postgres", "data", "database"))),
+        ]
+        return vector if any(vector) else [0.5, 0.5, 0.5, 0.5]
+
+    def embed_documents(self, texts: list[str], titles: list[str]) -> list[list[float]]:
+        assert len(texts) == len(titles)
+        return [self._vector(text) for text in texts]
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._vector(text)
 
 
 class FakeJobExtractor:
@@ -62,6 +85,16 @@ def client(db_session: Session) -> TestClient:
 @pytest.fixture
 def fake_extractor() -> FakeJobExtractor:
     return FakeJobExtractor()
+
+
+@pytest.fixture
+def fake_embedder() -> FakeEmbeddingProvider:
+    return FakeEmbeddingProvider()
+
+
+@pytest.fixture
+def qdrant_client() -> QdrantClient:
+    return QdrantClient(":memory:")
 
 
 @pytest.fixture

@@ -10,6 +10,7 @@ COPY app ./app
 COPY migrations ./migrations
 COPY scripts ./scripts
 COPY data ./data
+COPY evaluation ./evaluation
 COPY alembic.ini ./
 RUN pip install --no-cache-dir .
 

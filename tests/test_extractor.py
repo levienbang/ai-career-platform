@@ -38,6 +38,21 @@ def test_extractor_requires_api_key() -> None:
         raise AssertionError("Expected missing API key configuration error")
 
 
+def test_extractor_rejects_unsupported_provider() -> None:
+    settings = Settings(
+        llm_provider="openai",
+        llm_model="test-model",
+        llm_api_key="test-key",
+    )
+
+    try:
+        LangChainJobExtractor(settings)
+    except ExtractorConfigurationError as error:
+        assert str(error) == "Unsupported LLM provider 'openai'. Supported: google"
+    else:
+        raise AssertionError("Expected unsupported provider configuration error")
+
+
 def test_extractor_retries_invalid_structured_output_without_network() -> None:
     settings = Settings(llm_model="test-model", llm_api_key="test-key", llm_max_retries=1)
     extractor = LangChainJobExtractor(settings)

@@ -2,7 +2,7 @@ import json
 from typing import Protocol
 
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.config import Settings
 from app.schemas.ingestion import JobExtraction, RawJobRecord
@@ -34,9 +34,9 @@ Do not invent canonical skill names; return the skill wording present in the rec
 class LangChainJobExtractor:
     def __init__(self, settings: Settings) -> None:
         provider = settings.llm_provider.casefold()
-        if provider != "openai":
+        if provider not in {"google", "gemini"}:
             raise ExtractorConfigurationError(
-                f"Unsupported LLM provider '{settings.llm_provider}'. Supported: openai"
+                f"Unsupported LLM provider '{settings.llm_provider}'. Supported: google"
             )
         if not settings.llm_model:
             raise ExtractorConfigurationError("LLM_MODEL must be configured for job extraction")
@@ -44,7 +44,7 @@ class LangChainJobExtractor:
         if not api_key:
             raise ExtractorConfigurationError("LLM_API_KEY must be configured for job extraction")
 
-        model = ChatOpenAI(
+        model = ChatGoogleGenerativeAI(
             model=settings.llm_model,
             api_key=api_key,
             temperature=0,
