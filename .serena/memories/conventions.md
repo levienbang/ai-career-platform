@@ -1,0 +1,11 @@
+# Project Conventions
+- Prefer simple readable code and avoid premature abstractions or dependencies not required by the current milestone.
+- Keep API schemas explicit; routes delegate business logic to services/retrieval/ingestion modules.
+- Add or update tests for every behavior change; deterministic fake extractors, embedders, rerankers, and in-memory/test services avoid paid provider calls.
+- Ruff: 100-character line length, Python 3.12 target; lint families E, F, I, B, UP.
+- Expected failures require explicit error handling; never hide failing checks.
+- Ingestion uses controlled canonical skill taxonomy; unknown skills fail validation until an alias is deliberately added. Duplicate protection covers source URL and normalized-content hash.
+- Dense index uses PostgreSQL `job_id` as Qdrant point ID for idempotent upsert. PostgreSQL and Qdrant synchronize only on explicit indexing in current scope.
+- Hybrid retrieval fuses independent BM25 and dense ranks with RRF; do not add raw BM25/cosine scores because scales differ.
+- Reranker must return every bounded candidate ID exactly once; unknown, missing, or duplicate IDs are errors, and provider/config/timeout failures are not silently downgraded.
+- Any future LLM-generated SQL is untrusted: parse/validate one read-only SELECT or WITH…SELECT, enforce table/column allowlists, database read-only permissions, row limits, and statement timeouts; keyword matching alone is insufficient.

@@ -11,7 +11,9 @@ the project roadmap, not an instruction to implement every milestone at once.
 
 - Implement only the milestone explicitly requested by the user.
 - Do not implement features from later milestones without being asked.
-- Inspect the existing repository before editing.
+- Inspect the relevant existing code before editing.
+- Avoid broad repository scans when Serena can locate the needed symbols,
+  references, or files more directly.
 - Preserve existing user changes.
 - Prefer simple, readable code over premature abstractions.
 - Do not introduce a dependency unless the current milestone requires it.
@@ -24,6 +26,36 @@ the project roadmap, not an instruction to implement every milestone at once.
 - Add or update tests for every behavior change.
 - Run relevant tests after implementation.
 - Report commands that could not be executed and explain why.
+
+
+## Serena usage
+
+Serena is available for semantic code navigation and project memory.
+
+- Activate the current repository with Serena when starting a new task if it is
+  not already active.
+- Before broad repository exploration, inspect Serena's available project
+  memories and read only the memories relevant to the current task.
+- Prefer Serena semantic tools for:
+  - symbol lookup,
+  - symbol overview,
+  - reference lookup,
+  - implementation discovery,
+  - code navigation.
+- Do not read every Serena memory by default.
+- Do not use Serena memory as a substitute for verifying current source code
+  when implementation details matter.
+- Update Serena memories only for durable project knowledge such as:
+  - architectural decisions,
+  - repository conventions,
+  - important milestone state,
+  - recurring commands,
+  - important implementation constraints,
+  - non-obvious lessons that are likely to matter in future sessions.
+- Do not store raw logs, temporary debugging details, or short-lived implementation
+  state in Serena memory.
+- If a Serena memory conflicts with current source code or the project specification,
+  treat the source code and `docs/PROJECT_SPEC.md` as authoritative.
 
 ## Technology constraints
 
@@ -81,6 +113,19 @@ Before declaring a milestone complete:
 - Keep API schemas explicit.
 - Include error handling for expected failures.
 - Do not hide failing checks.
+- Verify that new behavior fits the existing architecture rather than merely
+  passing isolated tests.
+
+## Tool usage
+
+Use tools deliberately.
+
+- Prefer Serena for semantic code navigation before broad filesystem searches.
+- Prefer targeted file reads over reading entire large files.
+- Prefer focused test execution before running the full test suite.
+- Use framework or library documentation when current API behavior is uncertain.
+- Do not introduce new tooling merely because it is available; use it only when
+  it improves the current task.
 
 ## Final response
 
