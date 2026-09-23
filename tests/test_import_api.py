@@ -18,12 +18,12 @@ def test_import_endpoint_and_reimport(client, taxonomy, fake_extractor) -> None:
     )
 
     assert first.status_code == 200
-    assert first.json()["inserted"] == 2
-    assert first.json()["skipped_duplicates"] == 1
+    assert first.json()["inserted"] == 6
+    assert first.json()["skipped_duplicates"] == 2
     assert first.json()["failed"] == 1
     assert second.status_code == 200
     assert second.json()["inserted"] == 0
-    assert second.json()["skipped_duplicates"] == 3
+    assert second.json()["skipped_duplicates"] == 8
 
 
 def test_import_endpoint_rejects_unsupported_files(client, fake_extractor) -> None:

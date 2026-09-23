@@ -21,7 +21,7 @@ class SearchResult(BaseModel):
 
 
 class SearchResponse(BaseModel):
-    method: Literal["keyword", "dense"]
+    method: Literal["keyword", "dense", "hybrid", "reranked"]
     query: str
     latency_ms: float = Field(ge=0)
     results: list[SearchResult]

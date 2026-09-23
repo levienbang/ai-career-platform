@@ -1,5 +1,5 @@
 from time import perf_counter
-from typing import Annotated, NoReturn
+from typing import Annotated, Literal, NoReturn
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from qdrant_client import QdrantClient
@@ -14,6 +14,7 @@ from app.retrieval.embeddings import (
     EmbeddingServiceError,
     build_embedding_provider,
 )
+from app.retrieval.hybrid import HybridSearchService
 from app.retrieval.keyword import KeywordSearchService
 from app.retrieval.qdrant import (
     CollectionConfigurationError,
@@ -22,6 +23,15 @@ from app.retrieval.qdrant import (
     SearchIndexNotReadyError,
     VectorStoreUnavailableError,
     build_qdrant_client,
+)
+from app.retrieval.reranker import (
+    JobReranker,
+    RerankedSearchService,
+    RerankerConfigurationError,
+    RerankerInputError,
+    RerankerResponseError,
+    RerankerServiceError,
+    build_reranker,
 )
 from app.retrieval.types import SearchHit
 from app.schemas.search import (
@@ -53,13 +63,28 @@ def get_vector_client(
     return build_qdrant_client(settings.qdrant_url, settings.qdrant_timeout_seconds)
 
 
+def get_job_reranker(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> JobReranker:
+    try:
+        return build_reranker(settings)
+    except RerankerConfigurationError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(error)
+        ) from error
+
+
 EmbeddingDependency = Annotated[EmbeddingProvider, Depends(get_embedding_provider)]
 QdrantDependency = Annotated[QdrantClient, Depends(get_vector_client)]
 SettingsDependency = Annotated[Settings, Depends(get_settings)]
+RerankerDependency = Annotated[JobReranker, Depends(get_job_reranker)]
 
 
 def _response(
-    method: str, request: SearchRequest, hits: list[SearchHit], started_at: float
+    method: Literal["keyword", "dense", "hybrid", "reranked"],
+    request: SearchRequest,
+    hits: list[SearchHit],
+    started_at: float,
 ) -> SearchResponse:
     return SearchResponse(
         method=method,
@@ -82,7 +107,29 @@ def _raise_retrieval_http_error(error: Exception) -> NoReturn:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(error)
         ) from error
+    if isinstance(error, RerankerInputError):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
+        ) from error
+    if isinstance(error, (RerankerServiceError, RerankerResponseError)):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(error)
+        ) from error
     raise error
+
+
+def _hybrid_service(
+    db: Session,
+    embedder: EmbeddingProvider,
+    client: QdrantClient,
+    settings: Settings,
+) -> HybridSearchService:
+    return HybridSearchService(
+        KeywordSearchService(db),
+        DenseSearchService(client, embedder, settings.qdrant_collection),
+        candidate_limit=settings.hybrid_candidate_limit,
+        rrf_k=settings.rrf_k,
+    )
 
 
 @router.post("/keyword", response_model=SearchResponse)
@@ -107,6 +154,45 @@ def dense_search(
     except Exception as error:
         _raise_retrieval_http_error(error)
     return _response("dense", request, hits, started_at)
+
+
+@router.post("/hybrid", response_model=SearchResponse)
+def hybrid_search(
+    request: SearchRequest,
+    db: DbSession,
+    embedder: EmbeddingDependency,
+    client: QdrantDependency,
+    settings: SettingsDependency,
+) -> SearchResponse:
+    started_at = perf_counter()
+    try:
+        hits = _hybrid_service(db, embedder, client, settings).search(
+            request.query, limit=request.limit
+        )
+    except Exception as error:
+        _raise_retrieval_http_error(error)
+    return _response("hybrid", request, hits, started_at)
+
+
+@router.post("/reranked", response_model=SearchResponse)
+def reranked_search(
+    request: SearchRequest,
+    db: DbSession,
+    embedder: EmbeddingDependency,
+    client: QdrantDependency,
+    settings: SettingsDependency,
+    reranker: RerankerDependency,
+) -> SearchResponse:
+    started_at = perf_counter()
+    try:
+        hits = RerankedSearchService(
+            _hybrid_service(db, embedder, client, settings),
+            reranker,
+            candidate_limit=settings.reranker_max_candidates,
+        ).search(request.query, limit=request.limit)
+    except Exception as error:
+        _raise_retrieval_http_error(error)
+    return _response("reranked", request, hits, started_at)
 
 
 @router.post("/index", response_model=IndexResponse)

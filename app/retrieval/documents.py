@@ -57,5 +57,6 @@ def build_search_document(job: Job) -> SearchDocument:
             "required_skills": required_skills,
             "preferred_skills": preferred_skills,
             "content_hash": job.content_hash,
+            "search_text": "\n".join(fields),
         },
     )

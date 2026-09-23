@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 from fastapi.testclient import TestClient
 from qdrant_client import QdrantClient
@@ -32,6 +34,16 @@ class FakeEmbeddingProvider:
 
     def embed_query(self, text: str) -> list[float]:
         return self._vector(text)
+
+
+class FakeJobReranker:
+    def rerank(self, query: str, candidates):
+        del query
+        ordered = list(reversed(candidates))
+        return [
+            replace(candidate, score=1 - rank / max(len(ordered), 1))
+            for rank, candidate in enumerate(ordered)
+        ]
 
 
 class FakeJobExtractor:
@@ -90,6 +102,11 @@ def fake_extractor() -> FakeJobExtractor:
 @pytest.fixture
 def fake_embedder() -> FakeEmbeddingProvider:
     return FakeEmbeddingProvider()
+
+
+@pytest.fixture
+def fake_reranker() -> FakeJobReranker:
+    return FakeJobReranker()
 
 
 @pytest.fixture

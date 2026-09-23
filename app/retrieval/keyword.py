@@ -27,6 +27,7 @@ def _to_hit(document: SearchDocument, score: float) -> SearchHit:
         experience_years_min=payload["experience_years_min"],
         required_skills=list(payload["required_skills"]),
         preferred_skills=list(payload["preferred_skills"]),
+        document_text=document.text,
     )
 
 

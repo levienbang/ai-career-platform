@@ -22,9 +22,9 @@ def test_pipeline_handles_batch_and_database_duplicates(
     second = pipeline.import_records(load_fixture())
 
     assert first.model_dump() == {
-        "processed": 4,
-        "inserted": 2,
-        "skipped_duplicates": 1,
+        "processed": 9,
+        "inserted": 6,
+        "skipped_duplicates": 2,
         "failed": 1,
         "errors": [
             {
@@ -34,10 +34,10 @@ def test_pipeline_handles_batch_and_database_duplicates(
         ],
     }
     assert second.inserted == 0
-    assert second.skipped_duplicates == 3
+    assert second.skipped_duplicates == 8
     assert second.failed == 1
-    assert db_session.scalar(select(func.count()).select_from(Job)) == 2
-    assert db_session.scalar(select(func.count()).select_from(Company)) == 2
+    assert db_session.scalar(select(func.count()).select_from(Job)) == 6
+    assert db_session.scalar(select(func.count()).select_from(Company)) == 6
     assert db_session.scalar(select(func.count()).select_from(JobSkill)) == 6
 
 

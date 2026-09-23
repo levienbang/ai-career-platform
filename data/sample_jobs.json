@@ -38,5 +38,50 @@
     "preferred_skills": ["docker"],
     "description": "Prototype computer vision models and package demos.",
     "source_url": null
+  },
+  {
+    "title": "AI Engineer Intern",
+    "company": "Northstar AI",
+    "location": "Ho Chi Minh City",
+    "employment_type": "Internship",
+    "experience_years_min": 0,
+    "description": "Northstar AI seeks an AI Engineer Intern in Ho Chi Minh City. Required: Python, FastAPI and Docker. Preferred: PostgreSQL. Build and test APIs for machine learning applications.",
+    "source_url": "https://example.com/jobs/northstar-ai-intern"
+  },
+  {
+    "title": "Computer Vision Engineer",
+    "company": "Blue Lens",
+    "location": "Hanoi",
+    "employment_type": "Full-time",
+    "experience_years_min": 1,
+    "description": "Blue Lens seeks a Computer Vision Engineer in Hanoi with at least one year of experience. Required: Python and Computer Vision. Preferred: Docker. Develop image analysis services.",
+    "source_url": "https://example.com/jobs/blue-lens-cv"
+  },
+  {
+    "title": "Backend Engineer for AI Products",
+    "company": "Open Path",
+    "location": "Remote",
+    "employment_type": "Full-time",
+    "experience_years_min": 2,
+    "description": "Open Path seeks a remote Backend Engineer with at least two years of experience. Required: Python, Fast API and postgres. Preferred: Docker. Develop APIs and maintain relational data services.",
+    "source_url": "https://example.com/jobs/open-path-backend"
+  },
+  {
+    "title": "Machine Learning Engineer",
+    "company": "River Data",
+    "location": "Da Nang",
+    "employment_type": "Full-time",
+    "experience_years_min": 1,
+    "description": "River Data seeks a Machine Learning Engineer in Da Nang with at least one year of experience. Required: Python and Docker. Preferred: Postgre SQL. Deploy and monitor machine learning models.",
+    "source_url": "https://example.com/jobs/river-data-ml"
+  },
+  {
+    "title": "Backend Engineer for AI Products",
+    "company": "Open Path",
+    "location": "Remote",
+    "employment_type": "Full-time",
+    "experience_years_min": 2,
+    "description": "Open Path seeks a remote Backend Engineer with at least two years of experience. Required: Python, Fast API and postgres. Preferred: Docker. Develop APIs and maintain relational data services.",
+    "source_url": "https://example.com/jobs/open-path-backend"
   }
 ]

@@ -36,6 +36,7 @@ class DenseSearchService:
             experience_years_min=payload.get("experience_years_min"),
             required_skills=list(payload.get("required_skills", [])),
             preferred_skills=list(payload.get("preferred_skills", [])),
+            document_text=str(payload.get("search_text", "")),
         )
 
     def search(self, query: str, *, limit: int = 5) -> list[SearchHit]:

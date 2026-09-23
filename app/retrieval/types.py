@@ -12,3 +12,4 @@ class SearchHit:
     experience_years_min: int | None
     required_skills: list[str]
     preferred_skills: list[str]
+    document_text: str = ""

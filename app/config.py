@@ -17,6 +17,14 @@ class Settings(BaseSettings):
     embedding_api_key: SecretStr | None = None
     embedding_dimensions: int = Field(default=768, ge=128, le=3072)
     embedding_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
+    hybrid_candidate_limit: int = Field(default=20, ge=2, le=100)
+    rrf_k: int = Field(default=60, ge=1, le=1_000)
+    reranker_provider: str = "google"
+    reranker_model: str = "gemini-3.5-flash"
+    reranker_api_key: SecretStr | None = None
+    reranker_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
+    reranker_max_retries: int = Field(default=1, ge=0, le=5)
+    reranker_max_candidates: int = Field(default=20, ge=2, le=50)
     qdrant_url: str = "http://localhost:6333"
     qdrant_collection: str = "jobs"
     qdrant_timeout_seconds: float = Field(default=10.0, gt=0, le=120)

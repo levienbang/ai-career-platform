@@ -1,9 +1,9 @@
 # AI Career Intelligence Platform
 
-Milestones 1–3 provide the FastAPI/PostgreSQL foundation, structured job ingestion,
-and two independent retrieval baselines: BM25 keyword search over PostgreSQL jobs and
-dense semantic search over a Qdrant index. Hybrid fusion, reranking, SQL tools,
-LangGraph, CV parsing, and a generated-answer API remain out of scope.
+Milestones 1–4 provide the FastAPI/PostgreSQL foundation, structured job ingestion,
+BM25 and dense retrieval, Reciprocal Rank Fusion (RRF), and reranking of a bounded
+hybrid candidate set. SQL tools, LangGraph, CV parsing, frontend, and a
+generated-answer API remain out of scope.
 
 ## Run with Docker Compose
 
@@ -17,6 +17,29 @@ curl http://localhost:8000/jobs
 ```
 
 Swagger UI is available at <http://localhost:8000/docs>.
+
+## Fast development with Docker
+
+Build the development image once, then run Compose with source mounts and Uvicorn
+reload:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
+```
+
+After the first build, ordinary Python changes under `app/`, `scripts/`,
+`evaluation/`, or `tests/` are visible inside the container immediately. Changes in
+`app/` automatically restart Uvicorn; no image rebuild is needed:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f api
+docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api pytest -q
+```
+
+Rebuild the dev image only after changing `pyproject.toml`, the Dockerfile, Python
+version, or another system dependency. Use plain `docker compose up --build -d` when
+you intentionally want to verify the production-style image without source mounts.
 
 ## Local development
 
@@ -82,12 +105,20 @@ EMBEDDING_PROVIDER=google
 EMBEDDING_MODEL=gemini-embedding-001
 EMBEDDING_API_KEY=
 EMBEDDING_DIMENSIONS=768
+HYBRID_CANDIDATE_LIMIT=20
+RRF_K=60
+RERANKER_PROVIDER=google
+RERANKER_MODEL=gemini-3.5-flash
+RERANKER_API_KEY=
+RERANKER_TIMEOUT_SECONDS=30
+RERANKER_MAX_CANDIDATES=20
 QDRANT_URL=http://qdrant:6333
 QDRANT_COLLECTION=jobs
 ```
 
 When `EMBEDDING_API_KEY` is empty, the application uses the local `LLM_API_KEY`.
-Neither value belongs in source control. Google document and query embeddings use
+Neither value belongs in source control. The reranker also falls back to
+`LLM_API_KEY` when `RERANKER_API_KEY` is empty. Google document and query embeddings use
 the retrieval-specific task types and vectors are normalized before Qdrant cosine
 search.
 
@@ -111,6 +142,9 @@ passing `{"job_id": 123}` indexes one job. After ingestion, run one of these ind
 operations. There is no background queue in Milestone 3, so PostgreSQL and Qdrant are
 briefly out of sync until this explicit step runs.
 
+Reindex once after upgrading from Milestone 3 because the Qdrant payload now includes
+the complete search document needed by the reranker.
+
 Search examples:
 
 ```bash
@@ -121,6 +155,14 @@ curl -X POST http://localhost:8000/search/keyword \
 curl -X POST http://localhost:8000/search/semantic \
   -H 'Content-Type: application/json' \
   -d '{"query":"work with images as an intern", "limit":5}'
+
+curl -X POST http://localhost:8000/search/hybrid \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"computer vision internship for fresher", "limit":5}'
+
+curl -X POST http://localhost:8000/search/reranked \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"computer vision internship for fresher", "limit":5}'
 ```
 
 Keyword search is an in-process BM25 baseline rebuilt from the current PostgreSQL
@@ -129,12 +171,26 @@ token mismatch and Vietnamese word segmentation can reduce recall. Dense retriev
 handles paraphrases better, but quality depends on the embedding model and it cannot
 see a PostgreSQL update until the Qdrant point is reindexed.
 
+Hybrid search retrieves independently from BM25 and dense search, then applies RRF
+with a stable rank-based tie-break. Raw BM25 and cosine scores are deliberately not
+added because they have unrelated scales. A job returned by both sources receives
+two reciprocal-rank contributions and is emitted only once by `job_id`.
+
+Reranked search sends only the top hybrid candidate pool (20 by default) to the
+configured reranker. The response must contain every candidate ID exactly once;
+unknown, missing, or duplicate IDs are rejected. Provider configuration and timeout
+errors return HTTP 503. This strict behavior avoids silently presenting hybrid output
+as if it had been reranked. Reranking can improve top-result ordering, but adds an LLM
+request and therefore substantially increases latency and external API dependency.
+
 Run the labelled 12-query evaluation after seeding and indexing:
 
 ```bash
 docker compose exec api python -m evaluation.evaluate_retrieval
 ```
 
-The command reports Recall@5 plus mean and median request latency for both methods
-and writes `evaluation/retrieval_results.json`. Tests use a deterministic fake
-embedding provider and never call a paid embedding API.
+The command compares keyword, dense, hybrid, and hybrid + reranking using Recall@5,
+MRR@10, mean latency, and median latency, then writes
+`evaluation/retrieval_results.json`. The same fixed labels from Milestone 3 are used.
+Tests use deterministic fake embedding and reranking providers and never call a paid
+API.

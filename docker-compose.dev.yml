@@ -1,0 +1,19 @@
+services:
+  api:
+    build:
+      context: .
+      args:
+        INSTALL_TARGET: ".[dev]"
+    volumes:
+      - ./app:/app/app
+      - ./migrations:/app/migrations
+      - ./scripts:/app/scripts
+      - ./data:/app/data
+      - ./evaluation:/app/evaluation
+      - ./tests:/app/tests
+      - ./alembic.ini:/app/alembic.ini:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+    command: >-
+      sh -c "alembic upgrade head &&
+      uvicorn app.main:app --host 0.0.0.0 --port 8000
+      --reload --reload-dir /app/app"
