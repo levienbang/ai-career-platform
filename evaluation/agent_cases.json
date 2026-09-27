@@ -1,0 +1,14 @@
+[
+  {"question": "Tìm job Computer Vision phù hợp fresher biết Python", "expected_route": "search"},
+  {"question": "Tìm việc backend AI remote dùng FastAPI và PostgreSQL", "expected_route": "search"},
+  {"question": "Công việc nào gần với project phân tích ảnh và video của tôi?", "expected_route": "search"},
+  {"question": "Tìm internship AI có dùng Docker", "expected_route": "search"},
+  {"question": "Có tổng cộng bao nhiêu job?", "expected_route": "sql"},
+  {"question": "Có bao nhiêu internship tại Ho Chi Minh City?", "expected_route": "sql"},
+  {"question": "Kỹ năng nào xuất hiện thường xuyên nhất trong các job?", "expected_route": "sql"},
+  {"question": "Đếm số job theo location", "expected_route": "sql"},
+  {"question": "Bao nhiêu job yêu cầu Docker?", "expected_route": "sql"},
+  {"question": "Tìm job Computer Vision cho fresher và cho biết tổng số job Computer Vision", "expected_route": "both"},
+  {"question": "Tìm internship AI phù hợp rồi thống kê kỹ năng phổ biến nhất", "expected_route": "both"},
+  {"question": "Tìm job remote dùng Python và đếm số job remote trong dữ liệu", "expected_route": "both"}
+]

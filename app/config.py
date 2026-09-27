@@ -7,11 +7,21 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_env: str = "development"
     database_url: str = "postgresql+psycopg://career:career@localhost:5432/career"
+    readonly_database_url: str | None = None
     llm_provider: str = "google"
     llm_model: str | None = None
     llm_api_key: SecretStr | None = None
     llm_max_retries: int = Field(default=2, ge=0, le=5)
     llm_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
+    agent_provider: str = "google"
+    agent_model: str = "gemini-3.5-flash"
+    agent_api_key: SecretStr | None = None
+    agent_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
+    agent_max_retries: int = Field(default=1, ge=0, le=5)
+    agent_search_limit: int = Field(default=5, ge=1, le=20)
+    agent_tool_max_retries: int = Field(default=1, ge=0, le=2)
+    sql_max_rows: int = Field(default=100, ge=1, le=1_000)
+    sql_statement_timeout_ms: int = Field(default=3_000, ge=100, le=30_000)
     embedding_provider: str = "google"
     embedding_model: str = "gemini-embedding-001"
     embedding_api_key: SecretStr | None = None

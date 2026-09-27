@@ -5,10 +5,13 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-career}
       POSTGRES_USER: ${POSTGRES_USER:-career}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-career}
+      POSTGRES_READONLY_USER: ${POSTGRES_READONLY_USER:-}
+      POSTGRES_READONLY_PASSWORD: ${POSTGRES_READONLY_PASSWORD:-}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -33,11 +36,21 @@ services:
     environment:
       APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://career:career@postgres:5432/career}
+      READONLY_DATABASE_URL: ${READONLY_DATABASE_URL:-}
       LLM_PROVIDER: ${LLM_PROVIDER:-google}
       LLM_MODEL: ${LLM_MODEL:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-2}
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-30}
+      AGENT_PROVIDER: ${AGENT_PROVIDER:-google}
+      AGENT_MODEL: ${AGENT_MODEL:-gemini-3.5-flash}
+      AGENT_API_KEY: ${AGENT_API_KEY:-}
+      AGENT_TIMEOUT_SECONDS: ${AGENT_TIMEOUT_SECONDS:-30}
+      AGENT_MAX_RETRIES: ${AGENT_MAX_RETRIES:-1}
+      AGENT_SEARCH_LIMIT: ${AGENT_SEARCH_LIMIT:-5}
+      AGENT_TOOL_MAX_RETRIES: ${AGENT_TOOL_MAX_RETRIES:-1}
+      SQL_MAX_ROWS: ${SQL_MAX_ROWS:-100}
+      SQL_STATEMENT_TIMEOUT_MS: ${SQL_STATEMENT_TIMEOUT_MS:-3000}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-google}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-gemini-embedding-001}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}

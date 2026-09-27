@@ -1,9 +1,9 @@
 # AI Career Intelligence Platform
 
-Milestones 1–4 provide the FastAPI/PostgreSQL foundation, structured job ingestion,
-BM25 and dense retrieval, Reciprocal Rank Fusion (RRF), and reranking of a bounded
-hybrid candidate set. SQL tools, LangGraph, CV parsing, frontend, and a
-generated-answer API remain out of scope.
+Milestones 1–5 provide the FastAPI/PostgreSQL foundation, structured job ingestion,
+BM25 and dense retrieval, Reciprocal Rank Fusion (RRF), bounded reranking, independent
+SQL/search tools, and a LangGraph router. CV parsing, frontend, and Milestone 6 work
+remain out of scope.
 
 ## Run with Docker Compose
 
@@ -70,6 +70,10 @@ Seed the controlled skill taxonomy before importing jobs:
 ```bash
 docker compose exec api python -m scripts.seed
 ```
+
+The seed command loads the taxonomy and 12 evaluation jobs from `data/seed_data.json`.
+`data/sample_jobs.json` and `data/sample_jobs.csv` are separate import examples and
+test fixtures; they are not loaded by the seed command.
 
 Configure the extraction provider in `.env`:
 
@@ -194,3 +198,79 @@ MRR@10, mean latency, and median latency, then writes
 `evaluation/retrieval_results.json`. The same fixed labels from Milestone 3 are used.
 Tests use deterministic fake embedding and reranking providers and never call a paid
 API.
+
+## SQL/Search tools and LangGraph agent
+
+Configure the agent model and a dedicated PostgreSQL read-only account:
+
+```dotenv
+AGENT_PROVIDER=google
+AGENT_MODEL=gemini-3.5-flash
+AGENT_API_KEY=
+AGENT_TIMEOUT_SECONDS=30
+AGENT_MAX_RETRIES=1
+AGENT_SEARCH_LIMIT=5
+AGENT_TOOL_MAX_RETRIES=1
+SQL_MAX_ROWS=100
+SQL_STATEMENT_TIMEOUT_MS=3000
+POSTGRES_READONLY_USER=career_readonly
+POSTGRES_READONLY_PASSWORD=choose-a-local-password
+READONLY_DATABASE_URL=postgresql+psycopg://career_readonly:choose-a-local-password@postgres:5432/career
+```
+
+`AGENT_API_KEY` falls back to the local `LLM_API_KEY`. Never commit either key or a
+real database password. On a fresh PostgreSQL volume, Compose creates the read-only
+role automatically. With an existing volume, run the idempotent setup script once
+after adding the two `POSTGRES_READONLY_*` values to `.env`:
+
+```bash
+docker compose up -d postgres
+docker compose exec postgres /docker-entrypoint-initdb.d/10-readonly-role.sh
+```
+
+The SQL Tool treats generated SQL as untrusted. SQLGlot parses the PostgreSQL AST;
+the validator accepts exactly one `SELECT` or `WITH ... SELECT`, rejects DML, DDL,
+administrative nodes, unsafe functions, `SELECT *`, system tables, unknown columns,
+locking queries, and multiple statements. It adds/caps `LIMIT`, while the executor
+also uses a read-only transaction and a local statement timeout. These application
+checks complement—not replace—the database role's SELECT-only grants.
+
+The Search Tool is a thin wrapper over the existing hybrid plus reranking pipeline.
+The graph routes each question to SQL, search, or both. Its final answer is rendered
+only from structured tool output; a failed or empty tool produces an explicit
+fallback instead of an inferred answer.
+
+Try the independent SQL Tool and the graph:
+
+```bash
+curl -X POST http://localhost:8000/analytics/query \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"Có bao nhiêu job yêu cầu Docker?"}'
+
+curl -X POST http://localhost:8000/agent/query \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"Tìm internship AI dùng Docker"}'
+```
+
+Run the fixed 12-question, pre-labelled agent evaluation with live PostgreSQL,
+Qdrant, embedding, reranking, and agent provider configuration:
+
+```bash
+docker compose exec api python -m evaluation.evaluate_agent
+```
+
+It writes routing accuracy, required-tool success rate, mean/median/P95 latency, and
+per-case failures to `evaluation/agent_results.json`. For `both` questions, search
+runs first. The router marks whether SQL should cover the whole dataset or only the
+returned job IDs. A statistic about "the jobs just found" therefore covers at most
+the configured top search results, not the entire matching corpus. If a required
+tool fails, the graph gives an explicit fallback.
+
+To evaluate only routing without sending job candidate content to the reranker, run:
+
+```bash
+docker compose exec api python -m evaluation.evaluate_routing
+```
+
+This sends only the 12 labelled question strings to the configured agent model and
+writes `evaluation/routing_results.json`.

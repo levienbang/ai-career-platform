@@ -1,0 +1,205 @@
+{
+  "taxonomy": {
+    "Python": {
+      "category": "programming",
+      "aliases": [
+        "python"
+      ]
+    },
+    "Docker": {
+      "category": "platform",
+      "aliases": [
+        "docker"
+      ]
+    },
+    "FastAPI": {
+      "category": "framework",
+      "aliases": [
+        "fast api",
+        "fastapi"
+      ]
+    },
+    "PostgreSQL": {
+      "category": "database",
+      "aliases": [
+        "postgres",
+        "postgresql",
+        "postgre sql"
+      ]
+    },
+    "LangChain": {
+      "category": "framework",
+      "aliases": [
+        "lang chain",
+        "langchain"
+      ]
+    },
+    "Computer Vision": {
+      "category": "domain",
+      "aliases": [
+        "computer vision",
+        "cv"
+      ]
+    }
+  },
+  "jobs": [
+    {
+      "title": "AI Engineer Intern",
+      "company": "Example AI Lab",
+      "location": "Ho Chi Minh City",
+      "employment_type": "Internship",
+      "experience_years_min": 0,
+      "description": "Build Python services and package them with Docker.",
+      "source_url": "https://example.com/jobs/ai-engineer-intern",
+      "skills": [
+        "Python",
+        "Docker"
+      ]
+    },
+    {
+      "title": "Machine Learning Engineer",
+      "company": "Example Data Company",
+      "location": "Hanoi",
+      "employment_type": "Full-time",
+      "experience_years_min": 2,
+      "description": "Develop machine-learning APIs using Python and FastAPI.",
+      "source_url": "https://example.com/jobs/ml-engineer",
+      "skills": [
+        "Python",
+        "FastAPI"
+      ]
+    },
+    {
+      "title": "Computer Vision Intern",
+      "company": "Vision Seed Studio",
+      "location": "Ho Chi Minh City",
+      "employment_type": "Internship",
+      "experience_years_min": 0,
+      "description": "Prototype image recognition and video analysis models with Python.",
+      "source_url": "https://example.com/eval/computer-vision-intern",
+      "skills": [
+        "Python",
+        "Computer Vision",
+        "Docker"
+      ]
+    },
+    {
+      "title": "Junior Computer Vision Engineer",
+      "company": "Camera Seed Labs",
+      "location": "Hanoi",
+      "employment_type": "Full-time",
+      "experience_years_min": 0,
+      "description": "Build image detection services for candidates without production experience.",
+      "source_url": "https://example.com/eval/junior-computer-vision",
+      "skills": [
+        "Python",
+        "Computer Vision"
+      ]
+    },
+    {
+      "title": "NLP Engineer",
+      "company": "Language Seed AI",
+      "location": "Remote",
+      "employment_type": "Full-time",
+      "experience_years_min": 1,
+      "description": "Develop language-model retrieval applications and conversational AI pipelines.",
+      "source_url": "https://example.com/eval/nlp-engineer",
+      "skills": [
+        "Python",
+        "LangChain"
+      ]
+    },
+    {
+      "title": "AI Backend Engineer",
+      "company": "Service Seed",
+      "location": "Da Nang",
+      "employment_type": "Full-time",
+      "experience_years_min": 2,
+      "description": "Build production APIs and relational data services for AI products.",
+      "source_url": "https://example.com/eval/ai-backend-engineer",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "PostgreSQL"
+      ]
+    },
+    {
+      "title": "MLOps Engineer",
+      "company": "Deploy Seed",
+      "location": "Remote",
+      "employment_type": "Full-time",
+      "experience_years_min": 2,
+      "description": "Package, deploy, and monitor machine-learning services in containers.",
+      "source_url": "https://example.com/eval/mlops-engineer",
+      "skills": [
+        "Python",
+        "Docker"
+      ]
+    },
+    {
+      "title": "Data Scientist",
+      "company": "Analytics Seed",
+      "location": "Ho Chi Minh City",
+      "employment_type": "Full-time",
+      "experience_years_min": 1,
+      "description": "Analyze product data, design experiments, and query relational datasets.",
+      "source_url": "https://example.com/eval/data-scientist",
+      "skills": [
+        "Python",
+        "PostgreSQL"
+      ]
+    },
+    {
+      "title": "AI Platform Engineer",
+      "company": "Platform Seed",
+      "location": "Ho Chi Minh City",
+      "employment_type": "Full-time",
+      "experience_years_min": 3,
+      "description": "Operate containerized API platforms and databases for AI teams.",
+      "source_url": "https://example.com/eval/ai-platform-engineer",
+      "skills": [
+        "Docker",
+        "FastAPI",
+        "PostgreSQL"
+      ]
+    },
+    {
+      "title": "Machine Learning Research Intern",
+      "company": "Research Seed Lab",
+      "location": "Hanoi",
+      "employment_type": "Internship",
+      "experience_years_min": 0,
+      "description": "Run machine-learning experiments and evaluate research prototypes.",
+      "source_url": "https://example.com/eval/ml-research-intern",
+      "skills": [
+        "Python"
+      ]
+    },
+    {
+      "title": "Backend Engineer Intern",
+      "company": "Remote Seed Product",
+      "location": "Remote",
+      "employment_type": "Internship",
+      "experience_years_min": 0,
+      "description": "Develop Python web APIs for an early-stage AI product.",
+      "source_url": "https://example.com/eval/backend-intern",
+      "skills": [
+        "Python",
+        "FastAPI"
+      ]
+    },
+    {
+      "title": "PostgreSQL Data Engineer",
+      "company": "Database Seed",
+      "location": "Hanoi",
+      "employment_type": "Full-time",
+      "experience_years_min": 2,
+      "description": "Design reliable relational data pipelines and database-backed services.",
+      "source_url": "https://example.com/eval/postgresql-data-engineer",
+      "skills": [
+        "Python",
+        "PostgreSQL"
+      ]
+    }
+  ]
+}

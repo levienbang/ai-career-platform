@@ -1,6 +1,7 @@
 # Project Core
-- AI Career Intelligence Platform backend; current implemented scope is milestones 1–4: PostgreSQL schema, structured ingestion, BM25/dense retrieval, reciprocal-rank fusion, and bounded reranking.
-- Source map: `app/api` FastAPI routes; `app/services` business services; `app/db` SQLAlchemy/session/repositories; `app/ingestion` cleaning/extraction/validation pipeline; `app/retrieval` keyword/dense/hybrid/reranking/Qdrant; `app/schemas` explicit Pydantic API models; `scripts` seed/index utilities; `migrations` Alembic revisions; `evaluation` retrieval benchmark; `tests` test suite.
+- AI Career Intelligence Platform backend; current implemented scope is milestones 1–5: PostgreSQL schema, structured ingestion, BM25/dense retrieval, RRF/reranking, safe SQL/search tools, and LangGraph routing.
+- Source map: `app/api` FastAPI routes; `app/tools` independent SQL/search tools; `app/graph` LangGraph routing/state; `app/services` business services; `app/db` SQLAlchemy/session/repositories; `app/ingestion` cleaning/extraction/validation; `app/retrieval` keyword/dense/hybrid/reranking/Qdrant; `app/schemas` Pydantic API models; `scripts` utilities; `migrations` Alembic; `evaluation` benchmarks; `tests` test suite.
+- `data/seed_data.json` holds the canonical skill taxonomy and 12 seed/evaluation jobs loaded by `scripts.seed`; `data/sample_jobs.json` and `.csv` are separate import demo/test fixtures.
 - Roadmap and scope authority: `docs/PROJECT_SPEC.md`; implement only the user-requested milestone and do not edit the spec unless explicitly requested.
 - Required implementation order: PostgreSQL/schema -> ingestion/extraction -> dense retrieval -> hybrid/reranking -> independent SQL/search tools -> LangGraph routing -> minimal CV skill gap -> evaluation/deployment.
 - Keep business logic outside API routes. SQL and retrieval tools must work independently before LangGraph integration.

@@ -14,7 +14,7 @@ from app.retrieval.embeddings import (
     EmbeddingServiceError,
     build_embedding_provider,
 )
-from app.retrieval.hybrid import HybridSearchService
+from app.retrieval.factory import build_hybrid_search_service, build_reranked_search_service
 from app.retrieval.keyword import KeywordSearchService
 from app.retrieval.qdrant import (
     CollectionConfigurationError,
@@ -26,7 +26,6 @@ from app.retrieval.qdrant import (
 )
 from app.retrieval.reranker import (
     JobReranker,
-    RerankedSearchService,
     RerankerConfigurationError,
     RerankerInputError,
     RerankerResponseError,
@@ -118,20 +117,6 @@ def _raise_retrieval_http_error(error: Exception) -> NoReturn:
     raise error
 
 
-def _hybrid_service(
-    db: Session,
-    embedder: EmbeddingProvider,
-    client: QdrantClient,
-    settings: Settings,
-) -> HybridSearchService:
-    return HybridSearchService(
-        KeywordSearchService(db),
-        DenseSearchService(client, embedder, settings.qdrant_collection),
-        candidate_limit=settings.hybrid_candidate_limit,
-        rrf_k=settings.rrf_k,
-    )
-
-
 @router.post("/keyword", response_model=SearchResponse)
 def keyword_search(request: SearchRequest, db: DbSession) -> SearchResponse:
     started_at = perf_counter()
@@ -166,7 +151,7 @@ def hybrid_search(
 ) -> SearchResponse:
     started_at = perf_counter()
     try:
-        hits = _hybrid_service(db, embedder, client, settings).search(
+        hits = build_hybrid_search_service(db, embedder, client, settings).search(
             request.query, limit=request.limit
         )
     except Exception as error:
@@ -185,11 +170,9 @@ def reranked_search(
 ) -> SearchResponse:
     started_at = perf_counter()
     try:
-        hits = RerankedSearchService(
-            _hybrid_service(db, embedder, client, settings),
-            reranker,
-            candidate_limit=settings.reranker_max_candidates,
-        ).search(request.query, limit=request.limit)
+        hits = build_reranked_search_service(db, embedder, client, reranker, settings).search(
+            request.query, limit=request.limit
+        )
     except Exception as error:
         _raise_retrieval_http_error(error)
     return _response("reranked", request, hits, started_at)

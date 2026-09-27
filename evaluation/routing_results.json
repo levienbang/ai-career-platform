@@ -1,0 +1,106 @@
+{
+  "case_count": 12,
+  "routing_accuracy": 1.0,
+  "routing_success_rate": 1.0,
+  "mean_latency_ms": 15964.243743250014,
+  "median_latency_ms": 15913.780652500009,
+  "p95_latency_ms": 16688.431300000047,
+  "cases": [
+    {
+      "question": "T\u00ecm job Computer Vision ph\u00f9 h\u1ee3p fresher bi\u1ebft Python",
+      "expected_route": "search",
+      "actual_route": "search",
+      "route_correct": true,
+      "latency_ms": 16028.06904800002,
+      "error": null
+    },
+    {
+      "question": "T\u00ecm vi\u1ec7c backend AI remote d\u00f9ng FastAPI v\u00e0 PostgreSQL",
+      "expected_route": "search",
+      "actual_route": "search",
+      "route_correct": true,
+      "latency_ms": 16515.014382000005,
+      "error": null
+    },
+    {
+      "question": "C\u00f4ng vi\u1ec7c n\u00e0o g\u1ea7n v\u1edbi project ph\u00e2n t\u00edch \u1ea3nh v\u00e0 video c\u1ee7a t\u00f4i?",
+      "expected_route": "search",
+      "actual_route": "search",
+      "route_correct": true,
+      "latency_ms": 17786.30846600004,
+      "error": null
+    },
+    {
+      "question": "T\u00ecm internship AI c\u00f3 d\u00f9ng Docker",
+      "expected_route": "search",
+      "actual_route": "search",
+      "route_correct": true,
+      "latency_ms": 15150.105631999962,
+      "error": null
+    },
+    {
+      "question": "C\u00f3 t\u1ed5ng c\u1ed9ng bao nhi\u00eau job?",
+      "expected_route": "sql",
+      "actual_route": "sql",
+      "route_correct": true,
+      "latency_ms": 16571.043672999964,
+      "error": null
+    },
+    {
+      "question": "C\u00f3 bao nhi\u00eau internship t\u1ea1i Ho Chi Minh City?",
+      "expected_route": "sql",
+      "actual_route": "sql",
+      "route_correct": true,
+      "latency_ms": 16688.431300000047,
+      "error": null
+    },
+    {
+      "question": "K\u1ef9 n\u0103ng n\u00e0o xu\u1ea5t hi\u1ec7n th\u01b0\u1eddng xuy\u00ean nh\u1ea5t trong c\u00e1c job?",
+      "expected_route": "sql",
+      "actual_route": "sql",
+      "route_correct": true,
+      "latency_ms": 15799.492256999998,
+      "error": null
+    },
+    {
+      "question": "\u0110\u1ebfm s\u1ed1 job theo location",
+      "expected_route": "sql",
+      "actual_route": "sql",
+      "route_correct": true,
+      "latency_ms": 15050.183549000052,
+      "error": null
+    },
+    {
+      "question": "Bao nhi\u00eau job y\u00eau c\u1ea7u Docker?",
+      "expected_route": "sql",
+      "actual_route": "sql",
+      "route_correct": true,
+      "latency_ms": 16684.04392399998,
+      "error": null
+    },
+    {
+      "question": "T\u00ecm job Computer Vision cho fresher v\u00e0 cho bi\u1ebft t\u1ed5ng s\u1ed1 job Computer Vision",
+      "expected_route": "both",
+      "actual_route": "both",
+      "route_correct": true,
+      "latency_ms": 15455.81150800001,
+      "error": null
+    },
+    {
+      "question": "T\u00ecm internship AI ph\u00f9 h\u1ee3p r\u1ed3i th\u1ed1ng k\u00ea k\u1ef9 n\u0103ng ph\u1ed5 bi\u1ebfn nh\u1ea5t",
+      "expected_route": "both",
+      "actual_route": "both",
+      "route_correct": true,
+      "latency_ms": 15212.781131000043,
+      "error": null
+    },
+    {
+      "question": "T\u00ecm job remote d\u00f9ng Python v\u00e0 \u0111\u1ebfm s\u1ed1 job remote trong d\u1eef li\u1ec7u",
+      "expected_route": "both",
+      "actual_route": "both",
+      "route_correct": true,
+      "latency_ms": 14629.640049000045,
+      "error": null
+    }
+  ]
+}
