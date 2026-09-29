@@ -68,6 +68,15 @@ services:
       QDRANT_COLLECTION: ${QDRANT_COLLECTION:-jobs}
       QDRANT_TIMEOUT_SECONDS: ${QDRANT_TIMEOUT_SECONDS:-10}
       MAX_IMPORT_BYTES: ${MAX_IMPORT_BYTES:-1000000}
+      MAX_CV_BYTES: ${MAX_CV_BYTES:-2000000}
+      MAX_CV_PAGES: ${MAX_CV_PAGES:-5}
+      CV_PROVIDER: ${CV_PROVIDER:-google}
+      CV_MODEL: ${CV_MODEL:-gemini-3.5-flash}
+      CV_API_KEY: ${CV_API_KEY:-}
+      CV_TIMEOUT_SECONDS: ${CV_TIMEOUT_SECONDS:-30}
+      LANGSMITH_TRACING: ${LANGSMITH_TRACING:-false}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
+      LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-ai-career-platform}
     ports:
       - "8000:8000"
     depends_on:
@@ -75,6 +84,12 @@ services:
         condition: service_healthy
       qdrant:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=5)"]
+      interval: 10s
+      timeout: 7s
+      retries: 5
+      start_period: 20s
     command: >-
       sh -c "alembic upgrade head &&
       uvicorn app.main:app --host 0.0.0.0 --port 8000"

@@ -39,6 +39,15 @@ class Settings(BaseSettings):
     qdrant_collection: str = "jobs"
     qdrant_timeout_seconds: float = Field(default=10.0, gt=0, le=120)
     max_import_bytes: int = Field(default=1_000_000, gt=0, le=10_000_000)
+    max_cv_bytes: int = Field(default=2_000_000, gt=0, le=10_000_000)
+    max_cv_pages: int = Field(default=5, ge=1, le=20)
+    cv_provider: str = "google"
+    cv_model: str = "gemini-3.5-flash"
+    cv_api_key: SecretStr | None = None
+    cv_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
+    langsmith_tracing: bool = False
+    langsmith_api_key: SecretStr | None = None
+    langsmith_project: str = "ai-career-platform"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

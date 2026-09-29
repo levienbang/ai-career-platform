@@ -1,0 +1,134 @@
+{
+  "mode": "deterministic-fakes-no-llm",
+  "ground_truth_file": "milestone7_cases.json",
+  "case_counts": {
+    "retrieval": 12,
+    "routing": 12,
+    "sql": 5,
+    "cv": 5,
+    "error": 5
+  },
+  "total_cases": 39,
+  "indexed_jobs": 17,
+  "retrieval": {
+    "keyword": {
+      "recall_at_5": 0.9166666666666666,
+      "mrr_at_10": 0.8472222222222222,
+      "p50_latency_ms": 2.339209000183473,
+      "p95_latency_ms": 2.523457999814127
+    },
+    "dense": {
+      "recall_at_5": 0.9583333333333334,
+      "mrr_at_10": 0.75,
+      "p50_latency_ms": 0.21745899994130014,
+      "p95_latency_ms": 0.3392079997865949
+    },
+    "hybrid": {
+      "recall_at_5": 0.9583333333333334,
+      "mrr_at_10": 0.9166666666666666,
+      "p50_latency_ms": 2.665416000127152,
+      "p95_latency_ms": 3.0849590002617333
+    },
+    "reranked": {
+      "recall_at_5": 0.9166666666666666,
+      "mrr_at_10": 0.9027777777777778,
+      "p50_latency_ms": 2.83091700021032,
+      "p95_latency_ms": 3.170791999764333
+    }
+  },
+  "routing": {
+    "intent_accuracy": 1.0,
+    "tool_selection_accuracy": 1.0,
+    "task_success_rate": 1.0,
+    "p50_latency_ms": 4.372750000129599,
+    "p95_latency_ms": 4.6611249999841675
+  },
+  "sql": {
+    "connection_mode": "app-role-read-only-tx",
+    "executable_sql_rate": 1.0,
+    "exact_result_accuracy": 1.0,
+    "cases": [
+      {
+        "id": "sql-01",
+        "actual_rows": [
+          [
+            10
+          ]
+        ],
+        "correct": true
+      },
+      {
+        "id": "sql-02",
+        "actual_rows": [
+          [
+            3
+          ]
+        ],
+        "correct": true
+      },
+      {
+        "id": "sql-03",
+        "actual_rows": [
+          [
+            3
+          ]
+        ],
+        "correct": true
+      },
+      {
+        "id": "sql-04",
+        "actual_rows": [
+          [
+            4
+          ]
+        ],
+        "correct": true
+      },
+      {
+        "id": "sql-05",
+        "actual_rows": [
+          [
+            3
+          ]
+        ],
+        "correct": true
+      }
+    ],
+    "unsafe_query_rejection_rate": 1.0
+  },
+  "cv": {
+    "correctness": 1.0
+  },
+  "error_cases": {
+    "correct_rejection_or_fallback_rate": 1.0,
+    "unsafe_query_rejection_rate": 1.0,
+    "cases": [
+      {
+        "id": "err-01",
+        "correct": true
+      },
+      {
+        "id": "err-02",
+        "correct": true
+      },
+      {
+        "id": "err-03",
+        "correct": true
+      },
+      {
+        "id": "err-04",
+        "correct": true
+      },
+      {
+        "id": "err-05",
+        "correct": true
+      }
+    ]
+  },
+  "system": {
+    "p50_latency_ms": 2.4081660003503202,
+    "p95_latency_ms": 4.752083000312268,
+    "error_rate": 0.0,
+    "measured_operations": 75
+  }
+}

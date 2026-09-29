@@ -3,6 +3,7 @@ from collections.abc import Callable
 from time import perf_counter
 from typing import Any, Literal, Protocol
 
+from langchain_core.callbacks import BaseCallbackHandler
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
 
@@ -50,7 +51,7 @@ def _invoke_with_retry[ResultT: (SQLToolResult, SearchToolResult)](
 
 def _render_grounded_answer(state: AgentState) -> str:
     if state.get("errors"):
-        return "Không thể trả lời từ dữ liệu vì tool không thực thi thành công."
+        return "Unable to answer because a required tool failed."
     if (
         state.get("route") == "both"
         and state.get("sql_scope") == "search_results"
@@ -61,7 +62,7 @@ def _render_grounded_answer(state: AgentState) -> str:
             or not state["sql_result"].rows
         )
     ):
-        return "Không tìm thấy dữ liệu phù hợp; hệ thống không suy đoán thêm."
+        return "No relevant data was found; no answer can be inferred."
     evidence: list[str] = []
     sql_result = state.get("sql_result")
     if sql_result and sql_result.rows:
@@ -91,7 +92,7 @@ def _render_grounded_answer(state: AgentState) -> str:
         evidence.append("Search result: []")
     if evidence:
         return "\n".join(evidence)
-    return "Không tìm thấy dữ liệu phù hợp; hệ thống không suy đoán thêm."
+    return "No relevant data was found; no answer can be inferred."
 
 
 class CareerAgent:
@@ -103,27 +104,21 @@ class CareerAgent:
         *,
         search_limit: int = 5,
         tool_max_retries: int = 1,
+        callbacks: list[BaseCallbackHandler] | None = None,
     ) -> None:
         self.router = router
         self.sql_tool = sql_tool
         self.search_tool = search_tool
         self.search_limit = search_limit
         self.tool_max_retries = tool_max_retries
+        self.callbacks = callbacks or []
         self.graph = self._build_graph()
 
     def _build_graph(self):
         builder = StateGraph(AgentState)
 
         def route_node(state: AgentState) -> AgentState:
-            decide = getattr(self.router, "decide", None)
-            if callable(decide):
-                decision = RouteDecision.model_validate(decide(state["question"]))
-            else:
-                route = self.router.route(state["question"])
-                decision = RouteDecision(
-                    route=route,
-                    sql_scope="search_results" if route == "both" else "all",
-                )
+            decision = RouteDecision.model_validate(self.router.decide(state["question"]))
             return {
                 "route": decision.route,
                 "sql_scope": decision.sql_scope,
@@ -181,9 +176,9 @@ class CareerAgent:
         builder.add_node("search", search_node)
         builder.add_node("answer", answer_node)
         builder.add_edge(START, "route")
-        builder.add_conditional_edges("route", after_route, {"sql": "sql", "search": "search"})
+        builder.add_conditional_edges("route", after_route)
         builder.add_edge("sql", "answer")
-        builder.add_conditional_edges("search", after_search, {"sql": "sql", "answer": "answer"})
+        builder.add_conditional_edges("search", after_search)
         builder.add_edge("answer", END)
         return builder.compile()
 
@@ -191,7 +186,7 @@ class CareerAgent:
         started_at = perf_counter()
         state: dict[str, Any] = self.graph.invoke(
             {"question": question, "errors": [], "retry_count": 0},
-            config={"recursion_limit": 8},
+            config={"recursion_limit": 8, "callbacks": self.callbacks},
         )
         return AgentRunResult(
             question=question,

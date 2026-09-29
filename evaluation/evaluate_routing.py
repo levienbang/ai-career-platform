@@ -22,7 +22,7 @@ def evaluate() -> dict[str, object]:
         actual_route = None
         error_message = None
         try:
-            actual_route = router.route(case["question"])
+            actual_route = router.decide(case["question"]).route
         except Exception as error:
             error_message = str(error)
         latency_ms = (perf_counter() - started_at) * 1000

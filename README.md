@@ -2,8 +2,8 @@
 
 Milestones 1–5 provide the FastAPI/PostgreSQL foundation, structured job ingestion,
 BM25 and dense retrieval, Reciprocal Rank Fusion (RRF), bounded reranking, independent
-SQL/search tools, and a LangGraph router. CV parsing, frontend, and Milestone 6 work
-remain out of scope.
+SQL/search tools, and a LangGraph router. Milestone 6 adds a one-request CV PDF
+skill-gap report. Frontend and application tracking remain out of scope.
 
 ## Run with Docker Compose
 
@@ -13,10 +13,38 @@ docker compose up --build -d
 docker compose exec api python -m scripts.seed
 docker compose exec api python -m scripts.index_jobs
 curl http://localhost:8000/health
+curl http://localhost:8000/ready
 curl http://localhost:8000/jobs
 ```
 
 Swagger UI is available at <http://localhost:8000/docs>.
+
+`/health` checks the API process. `/ready` checks PostgreSQL and Qdrant and returns
+503 if either dependency is unavailable; Compose uses `/ready` for the API
+healthcheck. Existing volumes are retained by normal `up --build` commands.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  U[Swagger / FastAPI] --> I[Job ingestion]
+  I --> P[(PostgreSQL: jobs and skill taxonomy)]
+  P --> X[Explicit index operation]
+  X --> Q[(Qdrant: job vectors)]
+  U --> A[LangGraph router]
+  A --> S[Validated SQL tool]
+  S --> P
+  A --> R[Keyword + dense + RRF + reranker]
+  R --> P
+  R --> Q
+  U --> C[CV PDF loader → structured extractor → evidence and alias check → skill gap]
+  C --> P
+```
+
+Routes and tools are kept separate so SQL safety, retrieval, and CV scoring can be
+tested without a model call. The CV endpoint reads a PDF in memory and does not
+persist its text or extracted profile. Indexing is explicit after import, so a
+new PostgreSQL job is not searchable in Qdrant until indexed.
 
 ## Fast development with Docker
 
@@ -62,6 +90,30 @@ pytest
 
 The database URL defaults to local PostgreSQL and can be overridden with
 `DATABASE_URL`.
+
+## CV skill gap
+
+Set `CV_API_KEY` in `.env` and choose `CV_PROVIDER`/`CV_MODEL` for structured
+extraction. Seed jobs and taxonomy first. In Swagger UI, call `POST /cv/upload`
+with one PDF and one or more `job_ids` form fields. For example:
+
+```bash
+curl -X POST http://localhost:8000/cv/upload \
+  -F 'file=@/path/to/cv.pdf;type=application/pdf' \
+  -F 'job_ids=1' -F 'job_ids=2'
+```
+
+The PDF is limited by `MAX_CV_BYTES` and `MAX_CV_PAGES`. A skill counts only when
+the extractor supplies a quote found in the PDF text and that quote names the
+canonical skill or an existing alias. Unknown skills are reported separately.
+Each job's score is `0.8 × required coverage + 0.2 × preferred coverage`;
+weights are renormalized if one group has no requirements. A job with no skill
+requirements scores zero. Market frequency is the share of selected jobs missing
+that skill. The response is immediate; CV text and profile data are not stored.
+
+This approach can miss scanned PDFs and skills expressed without a configured
+alias. Evidence checking blocks invented skills but cannot prove that a skill
+was used proficiently.
 
 ## Job ingestion
 
@@ -274,3 +326,62 @@ docker compose exec api python -m evaluation.evaluate_routing
 
 This sends only the 12 labelled question strings to the configured agent model and
 writes `evaluation/routing_results.json`.
+
+## Milestone 7 evaluation
+
+`evaluation/retrieval_cases.json` and `evaluation/agent_cases.json` retain their
+original 12 labels each. `evaluation/milestone7_cases.json` adds 5 SQL, 5 CV, and
+5 error/unanswerable cases, for 39 cases total. Labels were assigned from
+`data/seed_data.json` before measuring results. SQL counts are scoped to its ten
+`/eval/` jobs; CV fixtures contain synthetic skill text only.
+
+Run the deterministic suite after seeding the database:
+
+```bash
+docker compose exec api python -m evaluation.evaluate_milestone7
+```
+
+It writes `evaluation/milestone7_results.json` with Recall@5, MRR@10, P50/P95
+retrieval latency, routing intent/tool-selection accuracy and task success, SQL
+executable/exact-result/unsafe-query rejection rates, CV gap correctness, and
+overall P50/P95 latency and error rate. It uses an in-memory Qdrant collection,
+synthetic embeddings, a lexical reranker, a heuristic router, a fake SQL agent
+tool, and the real PostgreSQL seed data. SQL evaluation executes validated fixed
+queries against PostgreSQL in read-only transactions. These results test the
+pipeline and fixtures; they do **not** measure live LLM quality, token usage, or
+provider cost. `evaluation.evaluate_retrieval`, `evaluation.evaluate_agent`, and
+`evaluation.evaluate_routing` are separate live-provider evaluations and require
+configured keys. Never run them for a no-API-key evaluation.
+
+Set `LANGSMITH_TRACING=true`, `LANGSMITH_API_KEY`, and optionally
+`LANGSMITH_PROJECT` to send agent graph traces. Tracing is disabled by default;
+missing key or client setup failure leaves the graph usable. Tests verify a local
+callback receives a complete run. A remote LangSmith trace requires a valid key
+and network access.
+
+Run the integration path with PostgreSQL and Qdrant running:
+
+```bash
+docker compose exec -e RUN_DOCKER_E2E=1 api pytest -q tests/test_e2e_pipeline.py
+```
+
+It imports a synthetic job, indexes it in an isolated Qdrant collection, routes a
+question through a fake router and real search tool, checks the grounded answer,
+then removes only its own job and collection.
+
+## Engineering decisions and failure analysis
+
+| Decision | Reason | Failure case and limit |
+|---|---|---|
+| Explicit PostgreSQL → Qdrant indexing | Keeps ingestion simple and repeatable | Retrieval is stale before indexing; the operator must run `scripts.index_jobs` or `/search/index`. |
+| Existing skill taxonomy and quote evidence | Prevents the CV extractor from inventing recognized skills | An unlisted alias or scanned PDF can be missed; add reviewed aliases and provide text PDFs. |
+| AST-validated SQL plus read-only transaction and role | Model output is untrusted | An unavailable read-only role blocks production SQL; configure and verify its grants on existing volumes. |
+| RRF followed by bounded reranking | Combines dissimilar ranking scales | A weak reranker can lower Recall@5; compare all four methods before choosing. |
+| Optional LangSmith callback | Tracing should not stop user queries | No remote trace is produced without a valid key; local callback tests only prove integration. |
+
+The deterministic evaluation can appear strong because its fake router and
+embeddings are designed around a small fixed corpus. Run the live evaluation
+scripts separately before claiming model quality. On a current Docker test,
+the fixture reranker had lower Recall@5 than hybrid retrieval; retain that
+comparison rather than reporting only its better MRR. The 2–3 minute Swagger
+demo script is in `docs/DEMO.md`.

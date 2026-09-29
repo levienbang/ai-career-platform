@@ -63,6 +63,15 @@ class JobRepository:
         )
         return self.session.scalar(statement)
 
+    def get_many(self, job_ids: list[int]) -> list[Job]:
+        statement = (
+            select(Job)
+            .where(Job.id.in_(job_ids))
+            .options(selectinload(Job.skills).selectinload(JobSkill.skill))
+            .order_by(Job.id)
+        )
+        return list(self.session.scalars(statement))
+
     def get_by_source_url(self, source_url: str) -> Job | None:
         return self.session.scalar(select(Job).where(Job.source_url == source_url))
 

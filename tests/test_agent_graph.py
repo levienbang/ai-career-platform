@@ -1,20 +1,24 @@
 from app.graph.builder import CareerAgent
 from app.graph.router import RouteDecision
+from app.graph.state import AgentRoute, SQLScope
 from app.tools.search_tool import SearchToolJob, SearchToolResult
 from app.tools.sql_tool import SQLToolResult
 
 
 class FakeRouter:
-    def __init__(self, route: str) -> None:
+    def __init__(self, route: AgentRoute) -> None:
         self.selected_route = route
 
-    def route(self, question: str):
+    def decide(self, question: str) -> RouteDecision:
         assert question
-        return self.selected_route
+        return RouteDecision(
+            route=self.selected_route,
+            sql_scope="search_results" if self.selected_route == "both" else "all",
+        )
 
 
 class ScopedFakeRouter(FakeRouter):
-    def __init__(self, scope: str) -> None:
+    def __init__(self, scope: SQLScope) -> None:
         super().__init__("both")
         self.scope = scope
 
@@ -117,7 +121,7 @@ def test_combined_route_does_not_query_all_jobs_when_search_is_empty() -> None:
     )
 
     assert sql_tool.calls == 0
-    assert result.answer == "Không tìm thấy dữ liệu phù hợp; hệ thống không suy đoán thêm."
+    assert result.answer == "No relevant data was found; no answer can be inferred."
 
 
 def test_combined_global_count_is_not_limited_to_search_hits() -> None:
@@ -150,7 +154,7 @@ def test_tool_error_is_bounded_and_answer_does_not_invent_data() -> None:
 
     assert result.errors == ["search: qdrant unavailable"]
     assert result.search_result is None
-    assert result.answer == "Không thể trả lời từ dữ liệu vì tool không thực thi thành công."
+    assert result.answer == "Unable to answer because a required tool failed."
 
 
 def test_no_data_returns_explicit_grounded_fallback() -> None:
@@ -159,4 +163,4 @@ def test_no_data_returns_explicit_grounded_fallback() -> None:
     )
 
     assert result.errors == []
-    assert result.answer == "Không tìm thấy dữ liệu phù hợp; hệ thống không suy đoán thêm."
+    assert result.answer == "No relevant data was found; no answer can be inferred."

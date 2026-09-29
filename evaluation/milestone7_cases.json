@@ -1,0 +1,25 @@
+{
+  "dataset_version": 1,
+  "ground_truth_source": "Hand-labelled from data/seed_data.json before running Milestone 7 evaluations. SQL cases are restricted to the ten /eval/ seed URLs.",
+  "sql": [
+    {"id": "sql-01", "question": "How many evaluation jobs exist?", "sql": "SELECT COUNT(*) AS count FROM jobs", "expected_count": 10},
+    {"id": "sql-02", "question": "How many evaluation jobs require Docker?", "sql": "SELECT COUNT(*) AS count FROM jobs JOIN job_skills ON jobs.id = job_skills.job_id JOIN skills ON skills.id = job_skills.skill_id WHERE skills.canonical_name = 'Docker'", "expected_count": 3},
+    {"id": "sql-03", "question": "How many evaluation jobs require FastAPI?", "sql": "SELECT COUNT(*) AS count FROM jobs JOIN job_skills ON jobs.id = job_skills.job_id JOIN skills ON skills.id = job_skills.skill_id WHERE skills.canonical_name = 'FastAPI'", "expected_count": 3},
+    {"id": "sql-04", "question": "How many evaluation jobs require PostgreSQL?", "sql": "SELECT COUNT(*) AS count FROM jobs JOIN job_skills ON jobs.id = job_skills.job_id JOIN skills ON skills.id = job_skills.skill_id WHERE skills.canonical_name = 'PostgreSQL'", "expected_count": 4},
+    {"id": "sql-05", "question": "How many evaluation jobs are internships?", "sql": "SELECT COUNT(*) AS count FROM jobs WHERE employment_type = 'Internship'", "expected_count": 3}
+  ],
+  "cv": [
+    {"id": "cv-01", "text": "Skills: Python, Docker.", "claims": ["Python", "Docker"], "target_source_url": "https://example.com/jobs/ai-engineer-intern", "expected_matched": ["Docker", "Python"], "expected_missing_required": [], "expected_fit": 1.0},
+    {"id": "cv-02", "text": "Projects used Python.", "claims": ["Python"], "target_source_url": "https://example.com/jobs/ai-engineer-intern", "expected_matched": ["Python"], "expected_missing_required": ["Docker"], "expected_fit": 0.5},
+    {"id": "cv-03", "text": "Built data services with Postgres.", "claims": ["Postgres"], "target_source_url": "https://example.com/eval/ai-backend-engineer", "expected_matched": ["PostgreSQL"], "expected_missing_required": ["FastAPI", "Python"], "expected_fit": 0.3333},
+    {"id": "cv-04", "text": "Project: MysteryML.", "claims": ["MysteryML"], "target_source_url": "https://example.com/eval/ml-research-intern", "expected_matched": [], "expected_missing_required": ["Python"], "expected_fit": 0.0},
+    {"id": "cv-05", "text": "No technical skills listed.", "claims": [], "target_source_url": "https://example.com/eval/ai-platform-engineer", "expected_matched": [], "expected_missing_required": ["Docker", "FastAPI", "PostgreSQL"], "expected_fit": 0.0}
+  ],
+  "error": [
+    {"id": "err-01", "kind": "unsafe_sql", "input": "DELETE FROM jobs", "expected": "SQLValidationError"},
+    {"id": "err-02", "kind": "stacked_sql", "input": "SELECT id FROM jobs; SELECT id FROM jobs", "expected": "SQLValidationError"},
+    {"id": "err-03", "kind": "missing_job", "input": 2147483647, "expected": "TargetJobError"},
+    {"id": "err-04", "kind": "invalid_pdf", "input": "not-a-pdf", "expected": "CVPDFError"},
+    {"id": "err-05", "kind": "unanswerable", "input": "Find a nonexistent job", "expected": "No relevant data was found; no answer can be inferred."}
+  ]
+}

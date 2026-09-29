@@ -18,7 +18,7 @@ from app.retrieval.factory import build_reranked_search_service
 from app.retrieval.qdrant import build_qdrant_client
 from app.retrieval.reranker import build_reranker
 from app.schemas.agent import AgentResponse, AnalyticsResponse, NaturalLanguageQuery
-from app.tools.search_tool import HybridJobSearchTool
+from app.tools.search_tool import RerankedJobSearchTool
 from app.tools.sql_tool import (
     SQLAnalyticsTool,
     SQLExecutionError,
@@ -27,6 +27,7 @@ from app.tools.sql_tool import (
     SQLValidationError,
     build_sql_tool,
 )
+from app.tracing import build_agent_callbacks
 
 router = APIRouter(tags=["agent"])
 
@@ -73,7 +74,7 @@ class _LazySQLTool:
         return build_sql_tool(self.settings).invoke(question, job_ids=job_ids)
 
 
-class _LazySearchTool:
+class _LazyRerankedSearchTool:
     def __init__(self, db: Session, settings: Settings) -> None:
         self.db = db
         self.settings = settings
@@ -83,7 +84,7 @@ class _LazySearchTool:
         client = build_qdrant_client(self.settings.qdrant_url, self.settings.qdrant_timeout_seconds)
         reranker = build_reranker(self.settings)
         backend = build_reranked_search_service(self.db, embedder, client, reranker, self.settings)
-        return HybridJobSearchTool(backend).invoke(query, limit)
+        return RerankedJobSearchTool(backend).invoke(query, limit)
 
 
 def get_career_agent(
@@ -94,9 +95,10 @@ def get_career_agent(
     return CareerAgent(
         question_router,
         _LazySQLTool(settings),
-        _LazySearchTool(db, settings),
+        _LazyRerankedSearchTool(db, settings),
         search_limit=settings.agent_search_limit,
         tool_max_retries=settings.agent_tool_max_retries,
+        callbacks=build_agent_callbacks(settings),
     )
 
 

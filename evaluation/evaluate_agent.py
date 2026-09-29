@@ -12,7 +12,7 @@ from app.graph.router import build_question_router
 from app.retrieval.embeddings import build_embedding_provider
 from app.retrieval.factory import build_reranked_search_service
 from app.retrieval.reranker import build_reranker
-from app.tools.search_tool import HybridJobSearchTool
+from app.tools.search_tool import RerankedJobSearchTool
 from app.tools.sql_tool import build_sql_tool
 
 CASES_FILE = Path(__file__).with_name("agent_cases.json")
@@ -52,7 +52,7 @@ def evaluate() -> dict[str, object]:
     client = QdrantClient(url=settings.qdrant_url, timeout=settings.qdrant_timeout_seconds)
 
     with SessionLocal() as session:
-        search_tool = HybridJobSearchTool(
+        search_tool = RerankedJobSearchTool(
             build_reranked_search_service(session, embedder, client, reranker, settings)
         )
         agent = CareerAgent(

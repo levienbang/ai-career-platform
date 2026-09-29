@@ -33,7 +33,7 @@ class SearchToolResult(BaseModel):
     jobs: list[SearchToolJob]
 
 
-class HybridJobSearchTool:
+class RerankedJobSearchTool:
     """Thin tool wrapper around the existing reranked hybrid retrieval service."""
 
     def __init__(self, backend: SearchBackend) -> None:
@@ -52,7 +52,7 @@ class HybridJobSearchTool:
     def as_langchain_tool(self) -> StructuredTool:
         return StructuredTool.from_function(
             func=self.invoke,
-            name="hybrid_job_search",
+            name="reranked_job_search",
             description="Find relevant jobs with existing hybrid retrieval and reranking.",
             args_schema=SearchToolInput,
         )

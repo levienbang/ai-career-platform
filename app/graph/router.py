@@ -22,7 +22,7 @@ class RouteDecision(BaseModel):
 
 
 class QuestionRouter(Protocol):
-    def route(self, question: str) -> AgentRoute: ...
+    def decide(self, question: str) -> RouteDecision: ...
 
 
 class GoogleQuestionRouter:
@@ -75,9 +75,6 @@ class GoogleQuestionRouter:
             return RouteDecision.model_validate(self._model.invoke(messages))
         except Exception as error:
             raise AgentRoutingError("Question routing failed") from error
-
-    def route(self, question: str) -> AgentRoute:
-        return self.decide(question).route
 
 
 def build_question_router(settings: Settings) -> QuestionRouter:

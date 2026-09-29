@@ -1,5 +1,5 @@
 from app.retrieval.types import SearchHit
-from app.tools.search_tool import HybridJobSearchTool
+from app.tools.search_tool import RerankedJobSearchTool
 
 
 class FakeSearchBackend:
@@ -25,7 +25,7 @@ class FakeSearchBackend:
 
 def test_search_tool_wraps_existing_backend() -> None:
     backend = FakeSearchBackend()
-    tool = HybridJobSearchTool(backend)
+    tool = RerankedJobSearchTool(backend)
 
     result = tool.invoke("image internship", limit=3)
 
@@ -34,8 +34,9 @@ def test_search_tool_wraps_existing_backend() -> None:
 
 
 def test_search_langchain_wrapper_uses_structured_input() -> None:
-    wrapped = HybridJobSearchTool(FakeSearchBackend()).as_langchain_tool()
+    wrapped = RerankedJobSearchTool(FakeSearchBackend()).as_langchain_tool()
 
     result = wrapped.invoke({"query": "vision", "limit": 1})
 
+    assert wrapped.name == "reranked_job_search"
     assert result.jobs[0].title == "Computer Vision Intern"

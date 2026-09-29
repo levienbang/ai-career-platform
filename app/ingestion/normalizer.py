@@ -34,6 +34,17 @@ class SkillNormalizer:
             for alias in skill.aliases:
                 self._taxonomy[skill_lookup_key(alias.alias)] = skill
 
+    def resolve(self, value: str) -> Skill | None:
+        return self._taxonomy.get(skill_lookup_key(value))
+
+    def evidence_mentions(self, skill: Skill, evidence: str) -> bool:
+        for wording, candidate in self._taxonomy.items():
+            if candidate.id == skill.id and re.search(
+                rf"(?<!\w){re.escape(wording)}(?!\w)", skill_lookup_key(evidence)
+            ):
+                return True
+        return False
+
     def normalize(
         self, required_skills: list[str], preferred_skills: list[str]
     ) -> list[NormalizedJobSkill]:
