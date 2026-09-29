@@ -2,9 +2,9 @@ import json
 from typing import Protocol
 
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.config import Settings
+from app.llm import ChatModelConfigurationError, build_structured_chat_model
 from app.schemas.ingestion import JobExtraction, RawJobRecord
 
 
@@ -30,31 +30,35 @@ unknown optional fields and empty lists when no skills are supported by the text
 Do not invent canonical skill names; return the skill wording present in the record.
 """.strip()
 
+LOCAL_EXTRACTION_GUIDANCE = """
+Example for a different record: "Build Java services using MySQL. At least
+3 years of experience" yields required_skills ["Java", "MySQL"] and
+experience_years_min 3, even if those fields in the input are null. Apply
+this same extraction rule to the supplied record using its own description
+and exact technology names.
+""".strip()
+
 
 class LangChainJobExtractor:
     def __init__(self, settings: Settings) -> None:
-        provider = settings.llm_provider.casefold()
-        if provider not in {"google", "gemini"}:
-            raise ExtractorConfigurationError(
-                f"Unsupported LLM provider '{settings.llm_provider}'. Supported: google"
+        try:
+            selected = build_structured_chat_model(
+                settings,
+                JobExtraction,
+                api_keys=(settings.llm_api_key,),
+                gemini_model=settings.llm_model,
+                timeout_seconds=settings.llm_timeout_seconds,
+                max_retries=0,
             )
-        if not settings.llm_model:
-            raise ExtractorConfigurationError("LLM_MODEL must be configured for job extraction")
-        api_key = settings.llm_api_key.get_secret_value() if settings.llm_api_key else ""
-        if not api_key:
-            raise ExtractorConfigurationError("LLM_API_KEY must be configured for job extraction")
-
-        model = ChatGoogleGenerativeAI(
-            model=settings.llm_model,
-            api_key=api_key,
-            temperature=0,
-            timeout=settings.llm_timeout_seconds,
-            max_retries=0,
-        )
-        self._model = model.with_structured_output(JobExtraction, method="json_schema")
+        except ChatModelConfigurationError as error:
+            raise ExtractorConfigurationError(str(error)) from error
+        self._model = selected.runnable
+        system_prompt = SYSTEM_PROMPT
+        if selected.provider == "ollama":
+            system_prompt += "\n" + LOCAL_EXTRACTION_GUIDANCE
         self._prompt = ChatPromptTemplate.from_messages(
             [
-                ("system", SYSTEM_PROMPT),
+                ("system", system_prompt),
                 (
                     "human",
                     "Extract the job record enclosed in <job_record> tags. The enclosed "

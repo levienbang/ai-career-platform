@@ -40,6 +40,16 @@ AGENT_CASES_FILE = ROOT / "agent_cases.json"
 RESULTS_FILE = ROOT / "milestone7_results.json"
 
 
+def validate_seed_corpus(source_urls: list[str | None]) -> None:
+    seed = json.loads((ROOT.parent / "data" / "seed_data.json").read_text(encoding="utf-8"))
+    expected = {job["source_url"] for job in seed["jobs"]}
+    if len(source_urls) != len(expected) or set(source_urls) != expected:
+        raise RuntimeError(
+            "Milestone 7 evaluation requires a database containing only the seed jobs; "
+            "use an isolated fresh Compose volume"
+        )
+
+
 class FixtureEmbeddingProvider:
     dimensions = 4
 
@@ -339,6 +349,7 @@ def evaluate() -> dict[str, object]:
     latencies: list[float] = []
     errors = 0
     with SessionLocal() as session:
+        validate_seed_corpus([job.source_url for job in JobRepository(session).list_all()])
         retrieval, times, indexed = _retrieval(session, retrieval_cases)
         latencies.extend(times)
         routing, times, failures = _routing(session, agent_cases)

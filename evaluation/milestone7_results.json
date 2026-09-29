@@ -9,42 +9,42 @@
     "error": 5
   },
   "total_cases": 39,
-  "indexed_jobs": 17,
+  "indexed_jobs": 12,
   "retrieval": {
     "keyword": {
-      "recall_at_5": 0.9166666666666666,
-      "mrr_at_10": 0.8472222222222222,
-      "p50_latency_ms": 2.339209000183473,
-      "p95_latency_ms": 2.523457999814127
+      "recall_at_5": 1.0,
+      "mrr_at_10": 0.9166666666666666,
+      "p50_latency_ms": 2.3945840000578755,
+      "p95_latency_ms": 3.7962919999472433
     },
     "dense": {
       "recall_at_5": 0.9583333333333334,
-      "mrr_at_10": 0.75,
-      "p50_latency_ms": 0.21745899994130014,
-      "p95_latency_ms": 0.3392079997865949
+      "mrr_at_10": 0.8333333333333334,
+      "p50_latency_ms": 0.32362499996452243,
+      "p95_latency_ms": 0.6616660000418051
     },
     "hybrid": {
-      "recall_at_5": 0.9583333333333334,
-      "mrr_at_10": 0.9166666666666666,
-      "p50_latency_ms": 2.665416000127152,
-      "p95_latency_ms": 3.0849590002617333
+      "recall_at_5": 1.0,
+      "mrr_at_10": 0.9583333333333334,
+      "p50_latency_ms": 2.6877499999500287,
+      "p95_latency_ms": 4.276957999991282
     },
     "reranked": {
-      "recall_at_5": 0.9166666666666666,
-      "mrr_at_10": 0.9027777777777778,
-      "p50_latency_ms": 2.83091700021032,
-      "p95_latency_ms": 3.170791999764333
+      "recall_at_5": 1.0,
+      "mrr_at_10": 1.0,
+      "p50_latency_ms": 2.938833000030172,
+      "p95_latency_ms": 3.858792000073663
     }
   },
   "routing": {
     "intent_accuracy": 1.0,
     "tool_selection_accuracy": 1.0,
     "task_success_rate": 1.0,
-    "p50_latency_ms": 4.372750000129599,
-    "p95_latency_ms": 4.6611249999841675
+    "p50_latency_ms": 3.5680419999835067,
+    "p95_latency_ms": 4.14370799990138
   },
   "sql": {
-    "connection_mode": "app-role-read-only-tx",
+    "connection_mode": "read-only-role",
     "executable_sql_rate": 1.0,
     "exact_result_accuracy": 1.0,
     "cases": [
@@ -126,8 +126,8 @@
     ]
   },
   "system": {
-    "p50_latency_ms": 2.4081660003503202,
-    "p95_latency_ms": 4.752083000312268,
+    "p50_latency_ms": 2.5590419999161895,
+    "p95_latency_ms": 5.6714580000516435,
     "error_rate": 0.0,
     "measured_operations": 75
   }

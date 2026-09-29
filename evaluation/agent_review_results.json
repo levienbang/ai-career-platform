@@ -1,0 +1,70 @@
+{
+  "case_count": 6,
+  "routing_accuracy": 0.0,
+  "tool_success_rate": 0.0,
+  "mean_latency_ms": 400,
+  "median_latency_ms": 410,
+  "p95_latency_ms": 520,
+  "cases": [
+    {
+      "expected_route": "search",
+      "actual_route": null,
+      "sql_scope": null,
+      "tool_success": false,
+      "latency_ms": 505,
+      "errors": [
+        "AgentRoutingError: Question routing failed"
+      ]
+    },
+    {
+      "expected_route": "search",
+      "actual_route": null,
+      "sql_scope": null,
+      "tool_success": false,
+      "latency_ms": 520,
+      "errors": [
+        "AgentRoutingError: Question routing failed"
+      ]
+    },
+    {
+      "expected_route": "sql",
+      "actual_route": null,
+      "sql_scope": null,
+      "tool_success": false,
+      "latency_ms": 303,
+      "errors": [
+        "AgentRoutingError: Question routing failed"
+      ]
+    },
+    {
+      "expected_route": "sql",
+      "actual_route": null,
+      "sql_scope": null,
+      "tool_success": false,
+      "latency_ms": 407,
+      "errors": [
+        "AgentRoutingError: Question routing failed"
+      ]
+    },
+    {
+      "expected_route": "both",
+      "actual_route": null,
+      "sql_scope": null,
+      "tool_success": false,
+      "latency_ms": 248,
+      "errors": [
+        "AgentRoutingError: Question routing failed"
+      ]
+    },
+    {
+      "expected_route": "both",
+      "actual_route": null,
+      "sql_scope": null,
+      "tool_success": false,
+      "latency_ms": 414,
+      "errors": [
+        "AgentRoutingError: Question routing failed"
+      ]
+    }
+  ]
+}

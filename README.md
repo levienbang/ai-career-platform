@@ -93,8 +93,9 @@ The database URL defaults to local PostgreSQL and can be overridden with
 
 ## CV skill gap
 
-Set `CV_API_KEY` in `.env` and choose `CV_PROVIDER`/`CV_MODEL` for structured
-extraction. Seed jobs and taxonomy first. In Swagger UI, call `POST /cv/upload`
+Set `CV_API_KEY` or `LLM_API_KEY` in `.env` for Gemini, or set `OLLAMA_BASE_URL`
+for local structured extraction. `CV_MODEL` selects the Gemini model. Seed jobs
+and taxonomy first. In Swagger UI, call `POST /cv/upload`
 with one PDF and one or more `job_ids` form fields. For example:
 
 ```bash
@@ -127,15 +128,21 @@ The seed command loads the taxonomy and 12 evaluation jobs from `data/seed_data.
 `data/sample_jobs.json` and `data/sample_jobs.csv` are separate import examples and
 test fixtures; they are not loaded by the seed command.
 
-Configure the extraction provider in `.env`:
+Configure chat inference in `.env`:
 
 ```dotenv
-LLM_PROVIDER=google
 LLM_MODEL=gemini-3.5-flash
-LLM_API_KEY=your-api-key
+LLM_API_KEY=
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=gemma3:12b
 LLM_MAX_RETRIES=2
 ```
 
+With a Gemini API key, chat calls use Gemini even when `OLLAMA_BASE_URL` is set.
+Without a chat API key, they use the local Ollama URL. For the Docker API container,
+set a URL reachable from inside the container (for example
+`http://host.docker.internal:11434` when Ollama listens on that interface). The
+`OLLAMA_TIMEOUT_SECONDS` and `OLLAMA_NUM_PREDICT` variables control local calls.
 `LLM_API_KEY` must remain local and must never be committed. Import a small CSV or
 JSON file with:
 
@@ -163,7 +170,6 @@ EMBEDDING_API_KEY=
 EMBEDDING_DIMENSIONS=768
 HYBRID_CANDIDATE_LIMIT=20
 RRF_K=60
-RERANKER_PROVIDER=google
 RERANKER_MODEL=gemini-3.5-flash
 RERANKER_API_KEY=
 RERANKER_TIMEOUT_SECONDS=30
@@ -172,11 +178,12 @@ QDRANT_URL=http://qdrant:6333
 QDRANT_COLLECTION=jobs
 ```
 
-When `EMBEDDING_API_KEY` is empty, the application uses the local `LLM_API_KEY`.
-Neither value belongs in source control. The reranker also falls back to
-`LLM_API_KEY` when `RERANKER_API_KEY` is empty. Google document and query embeddings use
-the retrieval-specific task types and vectors are normalized before Qdrant cosine
-search.
+Dense and hybrid retrieval require `EMBEDDING_API_KEY`, independently of the chat
+model. Missing this key is a configuration error; there is no keyword fallback.
+Neither key belongs in source control. The reranker uses `RERANKER_API_KEY` or
+`LLM_API_KEY` for Gemini, otherwise the local Ollama URL. Google document and query
+embeddings use the retrieval-specific task types and vectors are normalized before
+Qdrant cosine search.
 
 The search document contains title, location, employment type, minimum experience,
 required/preferred canonical skills, and description. These fields express role,
@@ -256,7 +263,6 @@ API.
 Configure the agent model and a dedicated PostgreSQL read-only account:
 
 ```dotenv
-AGENT_PROVIDER=google
 AGENT_MODEL=gemini-3.5-flash
 AGENT_API_KEY=
 AGENT_TIMEOUT_SECONDS=30
@@ -270,7 +276,8 @@ POSTGRES_READONLY_PASSWORD=choose-a-local-password
 READONLY_DATABASE_URL=postgresql+psycopg://career_readonly:choose-a-local-password@postgres:5432/career
 ```
 
-`AGENT_API_KEY` falls back to the local `LLM_API_KEY`. Never commit either key or a
+`AGENT_API_KEY` falls back to the local `LLM_API_KEY`; without either key the agent
+uses `OLLAMA_BASE_URL`. Never commit either key or a
 real database password. On a fresh PostgreSQL volume, Compose creates the read-only
 role automatically. With an existing volume, run the idempotent setup script once
 after adding the two `POSTGRES_READONLY_*` values to `.env`:
@@ -335,7 +342,9 @@ original 12 labels each. `evaluation/milestone7_cases.json` adds 5 SQL, 5 CV, an
 `data/seed_data.json` before measuring results. SQL counts are scoped to its ten
 `/eval/` jobs; CV fixtures contain synthetic skill text only.
 
-Run the deterministic suite after seeding the database:
+Run the deterministic suite in a fresh, isolated database containing only the
+12 jobs from `data/seed_data.json`. The evaluator rejects extra jobs because they
+change retrieval rankings and make the fixed labels incomparable:
 
 ```bash
 docker compose exec api python -m evaluation.evaluate_milestone7
@@ -381,7 +390,35 @@ then removes only its own job and collection.
 
 The deterministic evaluation can appear strong because its fake router and
 embeddings are designed around a small fixed corpus. Run the live evaluation
-scripts separately before claiming model quality. On a current Docker test,
-the fixture reranker had lower Recall@5 than hybrid retrieval; retain that
-comparison rather than reporting only its better MRR. The 2–3 minute Swagger
-demo script is in `docs/DEMO.md`.
+scripts separately before claiming model quality. The 2–3 minute Swagger demo
+script is in `docs/DEMO.md`.
+
+## Portfolio release audit (29 September 2026)
+
+On an isolated Compose project with a fresh PostgreSQL volume, the 39-case
+deterministic evaluation indexed 12 seed jobs. It measured the following; all
+retrieval embeddings, reranking, and routing in this table use fakes:
+
+| Method | Recall@5 | MRR@10 | P95 latency |
+|---|---:|---:|---:|
+| Keyword | 1.000 | 0.917 | 3.80 ms |
+| Dense | 0.958 | 0.833 | 0.66 ms |
+| Hybrid | 1.000 | 0.958 | 4.28 ms |
+| Reranked | 1.000 | 1.000 | 3.86 ms |
+
+The fake router selected the expected route in 12/12 cases. Five fixed SQL
+queries returned exact results against PostgreSQL through a dedicated read-only
+role, and the five error cases passed. These timings exclude provider/network
+latency. An import-to-answer integration test passed against PostgreSQL and
+Qdrant, with fake extraction, routing, embedding, and reranking.
+
+The live model smoke test routed 0/3 synthetic questions: one provider HTTP 503,
+one timeout, and one provider error. No current live retrieval or full agent
+quality metric is available because `EMBEDDING_API_KEY` is not configured. The
+saved `evaluation/retrieval_results.json` and `evaluation/routing_results.json`
+are earlier runs and were not reproduced in this audit. Remote LangSmith tracing
+and live CV extraction also remain unverified. A [sanitized local trace](evaluation/agent_trace_example.json)
+records one complete fake-model search run on real PostgreSQL and Qdrant. See
+[the audit and release notes](docs/PORTFOLIO_RELEASE.md)
+for the acceptance checklist, failure analysis, demo steps, and accurate GitHub/CV
+description.

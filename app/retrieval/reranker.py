@@ -3,10 +3,10 @@ from dataclasses import replace
 from typing import Protocol
 
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel, Field
 
 from app.config import Settings
+from app.llm import ChatModelConfigurationError, build_structured_chat_model
 from app.retrieval.hybrid import HybridSearchService
 from app.retrieval.types import SearchHit
 
@@ -59,35 +59,33 @@ or invent a job_id.
 """.strip()
 
 
-class GoogleJobReranker:
-    def __init__(self, settings: Settings) -> None:
-        if settings.reranker_provider.casefold() not in {"google", "gemini"}:
-            raise RerankerConfigurationError(
-                f"Unsupported reranker provider '{settings.reranker_provider}'. Supported: google"
-            )
-        api_key = ""
-        if settings.reranker_api_key:
-            api_key = settings.reranker_api_key.get_secret_value()
-        if not api_key and settings.llm_api_key:
-            api_key = settings.llm_api_key.get_secret_value()
-        if not api_key:
-            raise RerankerConfigurationError(
-                "RERANKER_API_KEY or LLM_API_KEY must be configured for reranking"
-            )
-        if not settings.reranker_model:
-            raise RerankerConfigurationError("RERANKER_MODEL must be configured")
+LOCAL_RERANK_GUIDANCE = (
+    "Compare the query with each candidate's actual skills, title, and description. "
+    "Give stronger matches higher scores. Include every supplied job_id once, even "
+    "when relevance is low. Never score an ID that is absent from the candidates."
+)
 
-        model = ChatGoogleGenerativeAI(
-            model=settings.reranker_model,
-            api_key=api_key,
-            temperature=0,
-            timeout=settings.reranker_timeout_seconds,
-            max_retries=settings.reranker_max_retries,
-        )
-        self._model = model.with_structured_output(RerankOutput, method="json_schema")
+
+class LangChainJobReranker:
+    def __init__(self, settings: Settings) -> None:
+        try:
+            selected = build_structured_chat_model(
+                settings,
+                RerankOutput,
+                api_keys=(settings.reranker_api_key, settings.llm_api_key),
+                gemini_model=settings.reranker_model,
+                timeout_seconds=settings.reranker_timeout_seconds,
+                max_retries=settings.reranker_max_retries,
+            )
+        except ChatModelConfigurationError as error:
+            raise RerankerConfigurationError(str(error)) from error
+        self._model = selected.runnable
+        system_prompt = SYSTEM_PROMPT
+        if selected.provider == "ollama":
+            system_prompt += "\n" + LOCAL_RERANK_GUIDANCE
         self._prompt = ChatPromptTemplate.from_messages(
             [
-                ("system", SYSTEM_PROMPT),
+                ("system", system_prompt),
                 (
                     "human",
                     "Query:\n{query}\n\nCandidates JSON:\n{candidates_json}",
@@ -163,4 +161,4 @@ class RerankedSearchService:
 
 
 def build_reranker(settings: Settings) -> JobReranker:
-    return GoogleJobReranker(settings)
+    return LangChainJobReranker(settings)

@@ -10,11 +10,11 @@ from app.retrieval.embeddings import (
 def test_embedding_provider_requires_api_key() -> None:
     settings = Settings(
         embedding_api_key=None,
-        llm_api_key=None,
+        llm_api_key="chat-only-key",
         _env_file=None,
     )
 
-    with pytest.raises(EmbeddingConfigurationError, match="API_KEY"):
+    with pytest.raises(EmbeddingConfigurationError, match="EMBEDDING_API_KEY"):
         GoogleJobEmbeddingProvider(settings)
 
 

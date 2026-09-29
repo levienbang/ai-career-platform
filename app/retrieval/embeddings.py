@@ -39,11 +39,9 @@ class GoogleJobEmbeddingProvider:
         api_key = ""
         if settings.embedding_api_key:
             api_key = settings.embedding_api_key.get_secret_value()
-        if not api_key and settings.llm_api_key:
-            api_key = settings.llm_api_key.get_secret_value()
         if not api_key:
             raise EmbeddingConfigurationError(
-                "EMBEDDING_API_KEY or LLM_API_KEY must be configured for dense retrieval"
+                "EMBEDDING_API_KEY must be configured for dense retrieval"
             )
         if not settings.embedding_model:
             raise EmbeddingConfigurationError(

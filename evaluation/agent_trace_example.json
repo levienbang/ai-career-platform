@@ -1,0 +1,70 @@
+{
+  "mode": "real PostgreSQL and Qdrant; fake router, embeddings and reranker",
+  "route": "search",
+  "tool_result_count": 5,
+  "grounded_answer": true,
+  "latency_ms": 12.559,
+  "complete": true,
+  "events": [
+    {
+      "event": "start",
+      "name": "LangGraph",
+      "run_id": "01a0edbb-293c-71e3-bbce-8b31e7131e86",
+      "parent_run_id": null
+    },
+    {
+      "event": "start",
+      "name": "route",
+      "run_id": "01a0edbb-293c-71e3-bbce-8b42ebe56861",
+      "parent_run_id": "01a0edbb-293c-71e3-bbce-8b31e7131e86"
+    },
+    {
+      "event": "start",
+      "name": "after_route",
+      "run_id": "01a0edbb-293d-7521-93f9-02da315c3eba",
+      "parent_run_id": "01a0edbb-293c-71e3-bbce-8b42ebe56861"
+    },
+    {
+      "event": "end",
+      "run_id": "01a0edbb-293d-7521-93f9-02da315c3eba"
+    },
+    {
+      "event": "end",
+      "run_id": "01a0edbb-293c-71e3-bbce-8b42ebe56861"
+    },
+    {
+      "event": "start",
+      "name": "search",
+      "run_id": "01a0edbb-293d-7521-93f9-02e87fd0a19b",
+      "parent_run_id": "01a0edbb-293c-71e3-bbce-8b31e7131e86"
+    },
+    {
+      "event": "start",
+      "name": "after_search",
+      "run_id": "01a0edbb-2947-7743-8a44-a01f710cf9b3",
+      "parent_run_id": "01a0edbb-293d-7521-93f9-02e87fd0a19b"
+    },
+    {
+      "event": "end",
+      "run_id": "01a0edbb-2947-7743-8a44-a01f710cf9b3"
+    },
+    {
+      "event": "end",
+      "run_id": "01a0edbb-293d-7521-93f9-02e87fd0a19b"
+    },
+    {
+      "event": "start",
+      "name": "answer",
+      "run_id": "01a0edbb-2947-7743-8a44-a02dbf1e4316",
+      "parent_run_id": "01a0edbb-293c-71e3-bbce-8b31e7131e86"
+    },
+    {
+      "event": "end",
+      "run_id": "01a0edbb-2947-7743-8a44-a02dbf1e4316"
+    },
+    {
+      "event": "end",
+      "run_id": "01a0edbb-293c-71e3-bbce-8b31e7131e86"
+    }
+  ]
+}

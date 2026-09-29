@@ -33,3 +33,16 @@ evaluation deterministic. Chỉ dùng dữ liệu job mẫu và CV PDF giả.
 
 Không ghi hình CV cá nhân, token hoặc mật khẩu. Video demo là deliverable thủ
 công; tài liệu này là kịch bản thực hiện.
+
+## Checklist trước khi ghi hình
+
+- [ ] Dùng job/CV synthetic và đóng mọi tab chứa `.env`, API key hoặc dữ liệu cá nhân.
+- [ ] Xác nhận `/health`, `/ready` trả HTTP 200 và job seed hiện trong `/jobs`.
+- [ ] Chạy `python -m evaluation.evaluate_milestone7` trên database chỉ có 12 seed jobs;
+      chỉ gọi metric này là **deterministic/fake**, không gọi là model accuracy.
+- [ ] Nếu muốn demo `/agent/query` hoặc dense/hybrid/reranked live, cấu hình và
+      chạy thử model/embedding key trước; bỏ phần live nếu provider lỗi.
+- [ ] Nêu rõ E2E import-to-answer đã chạy trên PostgreSQL/Qdrant thật nhưng
+      extractor/router/embedding/reranker của test là fake.
+- [ ] Quay 2–3 phút theo mốc thời gian trên; kiểm tra lại video không lộ secret
+      và không nói các metric lịch sử như kết quả audit hiện tại.

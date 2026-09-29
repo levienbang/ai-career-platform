@@ -28,33 +28,26 @@ class RetryModel:
 
 
 def test_extractor_requires_api_key() -> None:
-    settings = Settings(llm_model="test-model", llm_api_key=None)
+    settings = Settings(llm_model="test-model", llm_api_key=None, _env_file=None)
 
     try:
         LangChainJobExtractor(settings)
     except ExtractorConfigurationError as error:
-        assert str(error) == "LLM_API_KEY must be configured for job extraction"
+        assert "Gemini API key or OLLAMA_BASE_URL" in str(error)
     else:
         raise AssertionError("Expected missing API key configuration error")
 
 
-def test_extractor_rejects_unsupported_provider() -> None:
+def test_extractor_retries_invalid_structured_output_without_network(monkeypatch) -> None:
     settings = Settings(
-        llm_provider="openai",
-        llm_model="test-model",
-        llm_api_key="test-key",
+        llm_model="test-model", llm_api_key="test-key", llm_max_retries=1, _env_file=None
     )
-
-    try:
-        LangChainJobExtractor(settings)
-    except ExtractorConfigurationError as error:
-        assert str(error) == "Unsupported LLM provider 'openai'. Supported: google"
-    else:
-        raise AssertionError("Expected unsupported provider configuration error")
-
-
-def test_extractor_retries_invalid_structured_output_without_network() -> None:
-    settings = Settings(llm_model="test-model", llm_api_key="test-key", llm_max_retries=1)
+    monkeypatch.setattr(
+        "app.ingestion.extractor.build_structured_chat_model",
+        lambda *_args, **_kwargs: type(
+            "Selected", (), {"provider": "gemini", "runnable": RetryModel()}
+        )(),
+    )
     extractor = LangChainJobExtractor(settings)
     retry_model = RetryModel()
     extractor._model = retry_model

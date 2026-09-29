@@ -1,9 +1,9 @@
 from typing import Protocol
 
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.config import Settings
+from app.llm import ChatModelConfigurationError, build_structured_chat_model
 from app.schemas.cv import CVExtraction
 
 
@@ -22,24 +22,32 @@ explicitly supported by the CV. For each skill, quote a short exact span contain
 skill name or alias. Use empty lists or null for missing information. Do not infer skills.
 """
 
+_LOCAL_CV_GUIDANCE = """Read each experience and skills section carefully. Copy only
+skills explicitly named in the CV. For example, text 'Built APIs with Python'
+supports the skill Python and the exact evidence span 'Python'; it does not
+support Java. Keep names, emails, and phone numbers out of the structured result.
+"""
+
 
 class LangChainCVExtractor:
     def __init__(self, settings: Settings) -> None:
-        if settings.cv_provider.casefold() not in {"google", "gemini"}:
-            raise CVExtractorError("Unsupported CV provider")
-        key = settings.cv_api_key.get_secret_value() if settings.cv_api_key else ""
-        if not settings.cv_model or not key:
-            raise CVExtractorError("CV_MODEL and CV_API_KEY must be configured")
-        model = ChatGoogleGenerativeAI(
-            model=settings.cv_model,
-            api_key=key,
-            temperature=0,
-            timeout=settings.cv_timeout_seconds,
-            max_retries=0,
-        )
-        self._model = model.with_structured_output(CVExtraction, method="json_schema")
+        try:
+            selected = build_structured_chat_model(
+                settings,
+                CVExtraction,
+                api_keys=(settings.cv_api_key, settings.llm_api_key),
+                gemini_model=settings.cv_model,
+                timeout_seconds=settings.cv_timeout_seconds,
+                max_retries=0,
+            )
+        except ChatModelConfigurationError as error:
+            raise CVExtractorError(str(error)) from error
+        self._model = selected.runnable
+        system_prompt = _SYSTEM_PROMPT
+        if selected.provider == "ollama":
+            system_prompt += "\n" + _LOCAL_CV_GUIDANCE
         self._prompt = ChatPromptTemplate.from_messages(
-            [("system", _SYSTEM_PROMPT), ("human", "<cv_data>\n{cv_text}\n</cv_data>")]
+            [("system", system_prompt), ("human", "<cv_data>\n{cv_text}\n</cv_data>")]
         )
 
     def extract(self, text: str) -> CVExtraction:

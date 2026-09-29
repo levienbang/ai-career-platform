@@ -1,7 +1,13 @@
 import json
 from pathlib import Path
 
-from evaluation.evaluate_milestone7 import FixtureEmbeddingProvider, FixtureRouter
+import pytest
+
+from evaluation.evaluate_milestone7 import (
+    FixtureEmbeddingProvider,
+    FixtureRouter,
+    validate_seed_corpus,
+)
 
 ROOT = Path(__file__).parents[1]
 
@@ -42,3 +48,11 @@ def test_fake_provider_and_router_are_deterministic():
     embedder = FixtureEmbeddingProvider()
     assert embedder.embed_query("Python Docker") == embedder.embed_query("Python Docker")
     assert FixtureRouter().decide("Tìm job và đếm số job").route == "both"
+
+
+def test_evaluation_rejects_contaminated_corpus():
+    seed = json.loads((ROOT / "data/seed_data.json").read_text())
+    source_urls = [job["source_url"] for job in seed["jobs"]]
+    validate_seed_corpus(source_urls)
+    with pytest.raises(RuntimeError, match="only the seed jobs"):
+        validate_seed_corpus(source_urls + ["https://example.com/unlabelled"])
