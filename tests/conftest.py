@@ -47,6 +47,17 @@ class FakeJobReranker:
 
 
 class FakeJobExtractor:
+    def extract_many(self, records: list[RawJobRecord]) -> list[JobExtraction | None]:
+        from pydantic import ValidationError
+
+        outputs = []
+        for record in records:
+            try:
+                outputs.append(self.extract(record))
+            except ValidationError:
+                outputs.append(None)
+        return outputs
+
     @staticmethod
     def _skills(value: list[str] | str | None) -> list[str]:
         if value is None:

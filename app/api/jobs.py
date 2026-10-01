@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 
 from app.config import Settings, get_settings
@@ -52,7 +53,10 @@ async def import_jobs(
         records = load_job_records(file.filename or "", content)
     except JobLoadError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
-    return JobIngestionPipeline(db, extractor).import_records(records)
+    # LLM extraction and database writes block; keep them off the event loop.
+    return await run_in_threadpool(
+        JobIngestionPipeline(db, extractor, settings).import_records, records
+    )
 
 
 @router.get("", response_model=list[JobResponse])

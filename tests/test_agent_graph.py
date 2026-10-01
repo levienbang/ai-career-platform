@@ -1,8 +1,9 @@
 from app.graph.builder import CareerAgent
 from app.graph.router import RouteDecision
 from app.graph.state import AgentRoute, SQLScope
+from app.retrieval.embeddings import EmbeddingConfigurationError
 from app.tools.search_tool import SearchToolJob, SearchToolResult
-from app.tools.sql_tool import SQLToolResult
+from app.tools.sql_tool import SQLToolConfigurationError, SQLToolResult
 
 
 class FakeRouter:
@@ -164,3 +165,42 @@ def test_no_data_returns_explicit_grounded_fallback() -> None:
 
     assert result.errors == []
     assert result.answer == "No relevant data was found; no answer can be inferred."
+
+
+class ConfigErrorSQLTool(FakeSQLTool):
+    def invoke(self, question: str, *, job_ids: list[int] | None = None) -> SQLToolResult:
+        self.calls += 1
+        raise SQLToolConfigurationError("READONLY_DATABASE_URL must be configured")
+
+
+class ConfigErrorSearchTool(FakeSearchTool):
+    def invoke(self, query: str, limit: int = 5) -> SearchToolResult:
+        self.calls += 1
+        raise EmbeddingConfigurationError("EMBEDDING_API_KEY must be configured")
+
+
+def test_single_tool_route_ignores_search_result_scope() -> None:
+    sql_tool = FakeSQLTool()
+    router = FakeRouter("sql")
+    router.decide = lambda question: RouteDecision(route="sql", sql_scope="search_results")
+
+    result = CareerAgent(router, sql_tool, FakeSearchTool()).invoke("count jobs")
+
+    assert result.sql_scope == "all"
+    assert sql_tool.job_ids is None
+
+
+def test_configuration_errors_are_not_retried() -> None:
+    sql_tool = ConfigErrorSQLTool()
+    search_tool = ConfigErrorSearchTool()
+
+    sql_result = CareerAgent(
+        FakeRouter("sql"), sql_tool, FakeSearchTool(), tool_max_retries=2
+    ).invoke("count jobs")
+    search_result = CareerAgent(
+        FakeRouter("search"), FakeSQLTool(), search_tool, tool_max_retries=2
+    ).invoke("find jobs")
+
+    assert sql_tool.calls == 1
+    assert search_tool.calls == 1
+    assert sql_result.errors and search_result.errors

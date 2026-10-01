@@ -6,7 +6,7 @@ class SearchHit:
     job_id: int
     score: float
     title: str
-    company: str
+    company: str | None
     location: str | None
     employment_type: str | None
     experience_years_min: int | None

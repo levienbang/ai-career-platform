@@ -6,7 +6,11 @@ from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
 from app.config import Settings
-from app.llm import ChatModelConfigurationError, build_structured_chat_model
+from app.llm import (
+    ChatModelConfigurationError,
+    build_structured_chat_model,
+    structured_output_guidance,
+)
 from app.retrieval.hybrid import HybridSearchService
 from app.retrieval.types import SearchHit
 
@@ -59,21 +63,12 @@ or invent a job_id.
 """.strip()
 
 
-LOCAL_RERANK_GUIDANCE = (
-    "Compare the query with each candidate's actual skills, title, and description. "
-    "Give stronger matches higher scores. Include every supplied job_id once, even "
-    "when relevance is low. Never score an ID that is absent from the candidates."
-)
-
-
 class LangChainJobReranker:
     def __init__(self, settings: Settings) -> None:
         try:
             selected = build_structured_chat_model(
                 settings,
                 RerankOutput,
-                api_keys=(settings.reranker_api_key, settings.llm_api_key),
-                gemini_model=settings.reranker_model,
                 timeout_seconds=settings.reranker_timeout_seconds,
                 max_retries=settings.reranker_max_retries,
             )
@@ -81,8 +76,7 @@ class LangChainJobReranker:
             raise RerankerConfigurationError(str(error)) from error
         self._model = selected.runnable
         system_prompt = SYSTEM_PROMPT
-        if selected.provider == "ollama":
-            system_prompt += "\n" + LOCAL_RERANK_GUIDANCE
+        system_prompt += structured_output_guidance(settings, RerankOutput)
         self._prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system_prompt),

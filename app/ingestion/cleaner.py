@@ -35,5 +35,16 @@ def clean_job_record(record: dict[str, Any]) -> dict[str, Any]:
         if key is None:
             continue
         canonical_key = FIELD_ALIASES.get(key.casefold(), key)
-        cleaned[canonical_key] = _clean_value(raw_value)
+        if canonical_key in {
+            "required_skills",
+            "preferred_skills",
+            "technical_skills",
+        } and isinstance(raw_value, str):
+            # Newlines delimit source skills; ordinary text whitespace is still collapsed.
+            cleaned[canonical_key] = (
+                "\n".join(line for value in raw_value.splitlines() if (line := clean_text(value)))
+                or None
+            )
+        else:
+            cleaned[canonical_key] = _clean_value(raw_value)
     return cleaned

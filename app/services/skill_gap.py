@@ -1,9 +1,10 @@
 import re
 from collections import Counter
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Job, RequirementType
+from app.db.models import Job, JobSkill, RequirementType
 from app.db.repositories import JobRepository
 from app.ingestion.normalizer import SkillNormalizer, skill_lookup_key
 from app.schemas.cv import CVExtraction, CVGapReport, GapSkill, JobGap, RecognizedSkill
@@ -57,24 +58,7 @@ def analyze_skill_gap(
     if missing_ids:
         raise TargetJobError(f"Target job not found: {min(missing_ids)}")
 
-    normalizer = SkillNormalizer(session)
-    recognized: dict[int, RecognizedSkill] = {}
-    unknown: set[str] = set()
-    normalized_text = skill_lookup_key(cv_text)
-    for claim in profile.skills:
-        evidence = claim.evidence.strip()
-        normalized_evidence = skill_lookup_key(evidence)
-        if not re.search(rf"(?<!\w){re.escape(normalized_evidence)}(?!\w)", normalized_text):
-            continue
-        skill = normalizer.resolve(claim.name)
-        if skill is None:
-            if claim.name.casefold() in evidence.casefold():
-                unknown.add(claim.name)
-        elif normalizer.evidence_mentions(skill, evidence):
-            recognized.setdefault(
-                skill.id, RecognizedSkill(skill=skill.canonical_name, evidence=evidence)
-            )
-
+    recognized, unknown = recognize_cv_skills(session, profile, cv_text)
     gaps = [_job_gap(job, set(recognized)) for job in jobs]
     required_counts = Counter(skill for gap in gaps for skill in gap.missing_required_skills)
     preferred_counts = Counter(skill for gap in gaps for skill in gap.missing_preferred_skills)
@@ -92,3 +76,28 @@ def analyze_skill_gap(
             for name, count in sorted(preferred_counts.items())
         ],
     )
+
+
+def recognize_cv_skills(
+    session: Session, profile: CVExtraction, cv_text: str
+) -> tuple[dict[int, RecognizedSkill], set[str]]:
+    normalizer = SkillNormalizer(session)
+    recognized: dict[int, RecognizedSkill] = {}
+    unknown: set[str] = set()
+    market_skill_ids = set(session.scalars(select(JobSkill.skill_id).distinct()))
+    normalized_text = skill_lookup_key(cv_text)
+    for claim in profile.skills:
+        evidence = claim.evidence.strip()
+        normalized_evidence = skill_lookup_key(evidence)
+        if not re.search(rf"(?<!\w){re.escape(normalized_evidence)}(?!\w)", normalized_text):
+            continue
+        skill = normalizer.resolve(claim.name)
+        if skill is None or skill.id not in market_skill_ids:
+            if claim.name.casefold() in evidence.casefold():
+                unknown.add(claim.name)
+        elif normalizer.evidence_mentions(skill, evidence):
+            recognized.setdefault(
+                skill.id, RecognizedSkill(skill=skill.canonical_name, evidence=evidence)
+            )
+
+    return recognized, unknown

@@ -1,12 +1,12 @@
-"""Select the configured structured-output chat model for application services."""
+"""Shared DeepSeek chat configuration; Google embeddings are configured separately."""
 
+import json
 from dataclasses import dataclass
 from typing import Literal
 
 from langchain_core.runnables import Runnable
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_ollama import ChatOllama
-from pydantic import BaseModel, SecretStr
+from langchain_deepseek import ChatDeepSeek
+from pydantic import BaseModel
 
 from app.config import Settings
 
@@ -17,56 +17,51 @@ class ChatModelConfigurationError(RuntimeError):
 
 @dataclass(frozen=True)
 class StructuredChatModel:
-    provider: Literal["gemini", "ollama"]
+    provider: Literal["deepseek"]
+    model: str
     runnable: Runnable
+
+
+def structured_output_guidance(settings: Settings, schema: type[BaseModel]) -> str:
+    """Return JSON-mode instructions with braces escaped for ChatPromptTemplate."""
+    if settings.deepseek_structured_output_method != "json_mode":
+        return ""
+    schema_json = json.dumps(schema.model_json_schema(), ensure_ascii=False)
+    return (
+        ("\nReturn one JSON object matching this schema: " + schema_json)
+        .replace("{", "{{")
+        .replace("}", "}}")
+    )
 
 
 def build_structured_chat_model(
     settings: Settings,
     schema: type[BaseModel],
     *,
-    api_keys: tuple[SecretStr | None, ...],
-    gemini_model: str,
     timeout_seconds: float,
     max_retries: int,
+    include_raw: bool = False,
 ) -> StructuredChatModel:
-    """Prefer a Gemini key; otherwise use Ollama when its URL is configured."""
-    api_key = ""
-    for secret in api_keys:
-        if secret:
-            api_key = secret.get_secret_value().strip()
-        if api_key:
-            break
-    if api_key:
-        if not gemini_model.strip():
-            raise ChatModelConfigurationError("A Gemini model name must be configured")
-        model = ChatGoogleGenerativeAI(
-            model=gemini_model,
-            api_key=api_key,
-            temperature=0,
-            timeout=timeout_seconds,
-            max_retries=max_retries,
-        )
-        return StructuredChatModel(
-            provider="gemini",
-            runnable=model.with_structured_output(schema, method="json_schema"),
-        )
-
-    base_url = (settings.ollama_base_url or "").strip()
-    if not base_url:
-        raise ChatModelConfigurationError(
-            "Configure a Gemini API key or OLLAMA_BASE_URL for local inference"
-        )
-    if not settings.ollama_model.strip():
-        raise ChatModelConfigurationError("OLLAMA_MODEL must be configured")
-    model = ChatOllama(
-        model=settings.ollama_model,
-        base_url=base_url,
+    secret = settings.deepseek_api_key
+    api_key = secret.get_secret_value().strip() if secret else ""
+    if not api_key:
+        raise ChatModelConfigurationError("DEEPSEEK_API_KEY must be configured")
+    model_name = settings.deepseek_model.strip()
+    if not model_name:
+        raise ChatModelConfigurationError("DEEPSEEK_MODEL must be configured")
+    chat_model = ChatDeepSeek(
+        model=model_name,
+        api_key=api_key,
+        base_url=settings.deepseek_base_url,
         temperature=0,
-        num_predict=settings.ollama_num_predict,
-        client_kwargs={"timeout": settings.ollama_timeout_seconds},
+        timeout=timeout_seconds,
+        max_retries=max_retries,
+        extra_body={"thinking": {"type": settings.deepseek_thinking}},
     )
     return StructuredChatModel(
-        provider="ollama",
-        runnable=model.with_structured_output(schema, method="json_schema"),
+        provider="deepseek",
+        model=model_name,
+        runnable=chat_model.with_structured_output(
+            schema, method=settings.deepseek_structured_output_method, include_raw=include_raw
+        ),
     )

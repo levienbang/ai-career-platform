@@ -78,6 +78,15 @@ def test_sql_validator_allows_join_aggregate_and_caps_limit() -> None:
     assert "skills AS s" in validated
 
 
+def test_sql_validator_allows_left_join_for_jobs_without_company() -> None:
+    sql = (
+        "SELECT COUNT(j.id) AS count FROM jobs AS j "
+        "LEFT JOIN companies AS c ON c.id = j.company_id WHERE c.id IS NULL"
+    )
+    validated = SQLSafetyValidator().validate(sql)
+    assert "LEFT JOIN companies AS c" in validated
+
+
 def test_sql_validator_allows_read_only_cte_and_safe_date_function() -> None:
     sql = """
     WITH monthly AS (

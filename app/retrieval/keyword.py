@@ -21,7 +21,7 @@ def _to_hit(document: SearchDocument, score: float) -> SearchHit:
         job_id=document.job_id,
         score=score,
         title=document.title,
-        company=str(payload["company"]),
+        company=payload.get("company"),
         location=payload["location"],
         employment_type=payload["employment_type"],
         experience_years_min=payload["experience_years_min"],

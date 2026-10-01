@@ -7,6 +7,13 @@ This repository implements the AI Career Intelligence Platform.
 Read `docs/PROJECT_SPEC.md` before making architectural decisions. That file is
 the project roadmap, not an instruction to implement every milestone at once.
 
+## Current milestone
+
+Read `docs/CURRENT_MILESTONE.md` and implement it phase by phase. The user
+authorized that file; it is overwritten for each new milestone. Where it
+conflicts with `docs/PROJECT_SPEC.md`, the current milestone file wins for
+that milestone only. Do not modify the Crawl repository (`../Crawl`).
+
 ## Working rules
 
 - Implement only the milestone explicitly requested by the user.

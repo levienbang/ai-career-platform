@@ -9,8 +9,14 @@ from pydantic import BaseModel, Field
 
 from app.graph.router import QuestionRouter, RouteDecision
 from app.graph.state import AgentRoute, AgentState, SQLScope
+from app.retrieval.embeddings import EmbeddingConfigurationError
+from app.retrieval.reranker import RerankerConfigurationError
 from app.tools.search_tool import SearchToolResult
-from app.tools.sql_tool import SQLToolResult, SQLValidationError
+from app.tools.sql_tool import SQLToolConfigurationError, SQLToolResult, SQLValidationError
+
+# Retrying cannot fix invalid SQL or missing configuration.
+SQL_NON_RETRYABLE = (SQLValidationError, SQLToolConfigurationError)
+SEARCH_NON_RETRYABLE = (EmbeddingConfigurationError, RerankerConfigurationError)
 
 
 class SQLToolLike(Protocol):
@@ -119,9 +125,11 @@ class CareerAgent:
 
         def route_node(state: AgentState) -> AgentState:
             decision = RouteDecision.model_validate(self.router.decide(state["question"]))
+            # Only the combined route can scope SQL to search results.
+            sql_scope = decision.sql_scope if decision.route == "both" else "all"
             return {
                 "route": decision.route,
-                "sql_scope": decision.sql_scope,
+                "sql_scope": sql_scope,
                 "errors": [],
             }
 
@@ -136,7 +144,7 @@ class CareerAgent:
                     else self.sql_tool.invoke(state["question"])
                 ),
                 max_retries=self.tool_max_retries,
-                non_retryable=(SQLValidationError,),
+                non_retryable=SQL_NON_RETRYABLE,
             )
             update: AgentState = {"retry_count": state.get("retry_count", 0) + retries}
             if result is not None:
@@ -149,6 +157,7 @@ class CareerAgent:
             result, error, retries = _invoke_with_retry(
                 lambda: self.search_tool.invoke(state["question"], limit=self.search_limit),
                 max_retries=self.tool_max_retries,
+                non_retryable=SEARCH_NON_RETRYABLE,
             )
             update: AgentState = {"retry_count": state.get("retry_count", 0) + retries}
             if result is not None:

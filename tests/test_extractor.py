@@ -28,24 +28,22 @@ class RetryModel:
 
 
 def test_extractor_requires_api_key() -> None:
-    settings = Settings(llm_model="test-model", llm_api_key=None, _env_file=None)
+    settings = Settings(deepseek_api_key=None, _env_file=None)
 
     try:
         LangChainJobExtractor(settings)
     except ExtractorConfigurationError as error:
-        assert "Gemini API key or OLLAMA_BASE_URL" in str(error)
+        assert "DEEPSEEK_API_KEY" in str(error)
     else:
         raise AssertionError("Expected missing API key configuration error")
 
 
 def test_extractor_retries_invalid_structured_output_without_network(monkeypatch) -> None:
-    settings = Settings(
-        llm_model="test-model", llm_api_key="test-key", llm_max_retries=1, _env_file=None
-    )
+    settings = Settings(deepseek_api_key="test-key", llm_max_retries=1, _env_file=None)
     monkeypatch.setattr(
         "app.ingestion.extractor.build_structured_chat_model",
         lambda *_args, **_kwargs: type(
-            "Selected", (), {"provider": "gemini", "runnable": RetryModel()}
+            "Selected", (), {"provider": "deepseek", "runnable": RetryModel()}
         )(),
     )
     extractor = LangChainJobExtractor(settings)

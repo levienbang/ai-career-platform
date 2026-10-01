@@ -3,7 +3,11 @@ from typing import Protocol
 from langchain_core.prompts import ChatPromptTemplate
 
 from app.config import Settings
-from app.llm import ChatModelConfigurationError, build_structured_chat_model
+from app.llm import (
+    ChatModelConfigurationError,
+    build_structured_chat_model,
+    structured_output_guidance,
+)
 from app.schemas.cv import CVExtraction
 
 
@@ -22,12 +26,6 @@ explicitly supported by the CV. For each skill, quote a short exact span contain
 skill name or alias. Use empty lists or null for missing information. Do not infer skills.
 """
 
-_LOCAL_CV_GUIDANCE = """Read each experience and skills section carefully. Copy only
-skills explicitly named in the CV. For example, text 'Built APIs with Python'
-supports the skill Python and the exact evidence span 'Python'; it does not
-support Java. Keep names, emails, and phone numbers out of the structured result.
-"""
-
 
 class LangChainCVExtractor:
     def __init__(self, settings: Settings) -> None:
@@ -35,8 +33,6 @@ class LangChainCVExtractor:
             selected = build_structured_chat_model(
                 settings,
                 CVExtraction,
-                api_keys=(settings.cv_api_key, settings.llm_api_key),
-                gemini_model=settings.cv_model,
                 timeout_seconds=settings.cv_timeout_seconds,
                 max_retries=0,
             )
@@ -44,8 +40,7 @@ class LangChainCVExtractor:
             raise CVExtractorError(str(error)) from error
         self._model = selected.runnable
         system_prompt = _SYSTEM_PROMPT
-        if selected.provider == "ollama":
-            system_prompt += "\n" + _LOCAL_CV_GUIDANCE
+        system_prompt += structured_output_guidance(settings, CVExtraction)
         self._prompt = ChatPromptTemplate.from_messages(
             [("system", system_prompt), ("human", "<cv_data>\n{cv_text}\n</cv_data>")]
         )

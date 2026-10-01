@@ -29,7 +29,7 @@ def test_pipeline_handles_batch_and_database_duplicates(
         "errors": [
             {
                 "record": 3,
-                "error": "Validation failed for title: Input should be a valid string",
+                "error": "Structured extraction failed",
             }
         ],
     }
@@ -38,7 +38,8 @@ def test_pipeline_handles_batch_and_database_duplicates(
     assert second.failed == 1
     assert db_session.scalar(select(func.count()).select_from(Job)) == 6
     assert db_session.scalar(select(func.count()).select_from(Company)) == 6
-    assert db_session.scalar(select(func.count()).select_from(JobSkill)) == 6
+    # Skills mentioned only in structured fields lack source-text evidence.
+    assert db_session.scalar(select(func.count()).select_from(JobSkill)) == 3
 
 
 def test_pipeline_deduplicates_content_without_source_url(

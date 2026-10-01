@@ -11,7 +11,7 @@ the historical retrieval/routing metrics as current results.
 
 This audit used a separate Compose project and new volumes. The existing `llm`
 project and its volumes were not reset. The audit image was based on the existing
-API image plus the declared `langchain-ollama` dependency: full rebuilds from the
+API image plus the chat provider dependency configured at audit time: full rebuilds from the
 repository Dockerfile failed because package downloads were unavailable or
 interrupted in this environment. Thus runtime startup passed, while clean image
 build reproducibility remains open.

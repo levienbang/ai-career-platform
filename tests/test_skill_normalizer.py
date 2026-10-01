@@ -19,4 +19,6 @@ def test_skill_normalizer_matches_aliases_case_insensitively(db_session, taxonom
 
 def test_skill_normalizer_rejects_unknown_taxonomy_entries(db_session, taxonomy) -> None:
     with pytest.raises(UnknownSkillsError, match="Unknown Framework"):
-        SkillNormalizer(db_session).normalize(["Unknown Framework"], [])
+        SkillNormalizer(db_session).normalize(
+            ["Unknown Framework"], [], evidence_text="Unknown Framework", create_missing=False
+        )

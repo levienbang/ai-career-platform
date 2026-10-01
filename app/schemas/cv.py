@@ -42,3 +42,23 @@ class CVGapReport(BaseModel):
     jobs: list[JobGap]
     missing_required_skills: list[GapSkill]
     missing_preferred_skills: list[GapSkill]
+
+
+class CVMatchedJob(BaseModel):
+    job_id: int
+    title: str
+    company: str | None
+    location: str | None
+    final_score: float
+    semantic_score: float
+    skill_score: float = Field(ge=0, le=1)
+    matched_skills: list[str]
+    missing_required_skills: list[str]
+    missing_preferred_skills: list[str]
+
+
+class CVMatchReport(BaseModel):
+    recognized_skills: list[RecognizedSkill]
+    unrecognized_skills: list[str]
+    query: str
+    jobs: list[CVMatchedJob]

@@ -46,6 +46,7 @@ class Job(Base):
             name="ck_jobs_experience_years_min_non_negative",
         ),
         UniqueConstraint("source_url", name="uq_jobs_source_url"),
+        UniqueConstraint("raw_hash", name="uq_jobs_raw_hash"),
         Index("ix_jobs_title", "title"),
         Index("ix_jobs_location", "location"),
         Index("ix_jobs_employment_type", "employment_type"),
@@ -53,8 +54,8 @@ class Job(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
-    company_id: Mapped[int] = mapped_column(
-        ForeignKey("companies.id", ondelete="RESTRICT"), nullable=False, index=True
+    company_id: Mapped[int | None] = mapped_column(
+        ForeignKey("companies.id", ondelete="RESTRICT"), nullable=True, index=True
     )
     location: Mapped[str | None] = mapped_column(String(255))
     employment_type: Mapped[str | None] = mapped_column(String(100))
@@ -66,8 +67,9 @@ class Job(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     content_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    raw_hash: Mapped[str | None] = mapped_column(String(64))
 
-    company: Mapped[Company] = relationship(back_populates="jobs")
+    company: Mapped[Company | None] = relationship(back_populates="jobs")
     skills: Mapped[list["JobSkill"]] = relationship(
         back_populates="job", cascade="all, delete-orphan"
     )
@@ -75,10 +77,14 @@ class Job(Base):
 
 class Skill(Base):
     __tablename__ = "skills"
+    __table_args__ = (
+        CheckConstraint("origin IN ('curated', 'extracted')", name="ck_skills_origin"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     canonical_name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     category: Mapped[str | None] = mapped_column(String(100))
+    origin: Mapped[str] = mapped_column(String(20), nullable=False, server_default="curated")
 
     aliases: Mapped[list["SkillAlias"]] = relationship(
         back_populates="skill", cascade="all, delete-orphan"

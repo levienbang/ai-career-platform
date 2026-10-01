@@ -91,10 +91,42 @@ pytest
 The database URL defaults to local PostgreSQL and can be overridden with
 `DATABASE_URL`.
 
+## Real jobs from Crawl and CV matching
+
+Apply the latest migration before importing. In the separate Crawl repository,
+export and deliver VietJobs records with the `extended` payload profile and
+JSON null for missing companies. On a fresh database, seed only the taxonomy so
+the demo jobs do not affect real-data CV matches. Then index the imported jobs before
+requesting CV matches:
+
+```bash
+# LLM repository, before delivery
+uv run alembic upgrade head
+uv run python -m scripts.seed --taxonomy-only
+
+# Crawl repository
+DELIVERY_PAYLOAD_PROFILE=extended DELIVERY_MISSING_COMPANY=send_null \
+  python -m job_pipeline export --source vietjobs
+python -m job_pipeline deliver --source vietjobs --endpoint http://localhost:8000/jobs/import
+
+# LLM repository
+uv run python scripts/index_jobs.py
+curl -F 'file=@cv.pdf' -F 'limit=10' http://localhost:8000/cv/match
+```
+
+`company` can be null. Skills with `origin=extracted` came from job text and
+have not been reviewed or merged into the curated taxonomy. Skills proposed by
+the extractor without a matching mention in the source job are discarded.
+CV matching combines dense semantic similarity with required and preferred
+skill coverage; it does not compare years of experience or call the LLM
+reranker. `CV_MATCH_CANDIDATES` controls the candidate pool (default 50), and
+`CV_MATCH_SEMANTIC_WEIGHT` controls the semantic share of the final score
+(default 0.6). Re-index all jobs after this milestone because the search
+document no longer includes minimum experience.
+
 ## CV skill gap
 
-Set `CV_API_KEY` or `LLM_API_KEY` in `.env` for Gemini, or set `OLLAMA_BASE_URL`
-for local structured extraction. `CV_MODEL` selects the Gemini model. Seed jobs
+Set `DEEPSEEK_API_KEY` in `.env` for CV structured extraction. Seed jobs
 and taxonomy first. In Swagger UI, call `POST /cv/upload`
 with one PDF and one or more `job_ids` form fields. For example:
 
@@ -124,36 +156,108 @@ Seed the controlled skill taxonomy before importing jobs:
 docker compose exec api python -m scripts.seed
 ```
 
-The seed command loads the taxonomy and 12 evaluation jobs from `data/seed_data.json`.
+The seed command loads the taxonomy and 12 demo jobs from `data/seed_data.json`.
+Use `python -m scripts.seed --taxonomy-only` (or add `--taxonomy-only` to the
+Docker command above) on a fresh database for real-data tests. This seeds or
+updates skills and aliases without creating companies or jobs; it leaves existing
+jobs in place.
 `data/sample_jobs.json` and `data/sample_jobs.csv` are separate import examples and
 test fixtures; they are not loaded by the seed command.
 
 Configure chat inference in `.env`:
 
 ```dotenv
-LLM_MODEL=gemini-3.5-flash
-LLM_API_KEY=
-OLLAMA_BASE_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=gemma3:12b
+DEEPSEEK_API_KEY=
+DEEPSEEK_MODEL=deepseek-v4-flash
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_STRUCTURED_OUTPUT_METHOD=function_calling
+DEEPSEEK_THINKING=disabled
 LLM_MAX_RETRIES=2
+LLM_BATCH_SIZE=8
+LLM_REQUESTS_PER_MINUTE=0
+LLM_STRUCTURED_FAST_PATH=true
 ```
 
-With a Gemini API key, chat calls use Gemini even when `OLLAMA_BASE_URL` is set.
-Without a chat API key, they use the local Ollama URL. For the Docker API container,
-set a URL reachable from inside the container (for example
-`http://host.docker.internal:11434` when Ollama listens on that interface). The
-`OLLAMA_TIMEOUT_SECONDS` and `OLLAMA_NUM_PREDICT` variables control local calls.
-`LLM_API_KEY` must remain local and must never be committed. Import a small CSV or
-JSON file with:
+All chat and structured extraction calls (job extraction, CV extraction, agent
+router, SQL generator, reranker) use the single `DEEPSEEK_MODEL`. Only embeddings
+use Google. Timeouts and retries still apply per component.
+
+`deepseek-v4-flash` runs in thinking mode unless told otherwise, and thinking
+mode rejects the forced tool call that `function_calling` sends (HTTP 400
+"Thinking mode does not support this tool_choice"). `DEEPSEEK_THINKING=disabled`
+(the default) turns it off for every chat call, which also avoids paying for
+reasoning tokens. Structured extraction does not need it.
+
+The default `function_calling` method uses tool calling. Switch to `json_mode`
+if needed; every system prompt then includes the JSON object schema. Pydantic
+validates the final output in both modes. Missing `DEEPSEEK_API_KEY` causes a
+configuration error. The key must remain in the ignored `.env`.
+
+Check connectivity with exactly one structured-output request (no retries):
+
+```bash
+uv run python scripts/check_deepseek.py
+# Optional alternative, also one request:
+uv run python scripts/check_deepseek.py --method json_mode
+```
+
+Job content and parsed CV text are sent to the DeepSeek API. Google receives
+embedding inputs via the separate `EMBEDDING_API_KEY`. This provider change does
+not change embedding dimensions and does not require re-indexing.
+
+Import a small CSV or JSON file with:
 
 ```bash
 curl -F "file=@data/sample_jobs.json" http://localhost:8000/jobs/import
 ```
 
 The response reports `processed`, `inserted`, `skipped_duplicates`, `failed`, and
-record-level validation errors. Unknown skill names fail validation until an alias
-is deliberately added to the `skills`/`skill_aliases` taxonomy. Re-importing the
+record-level validation errors. A new skill with a matching mention in the job
+is stored with `origin=extracted` for later review. Re-importing the
 same source URL or normalized content does not create another job.
+
+Import now runs in three stages within one request transaction:
+
+1. Clean and validate each record, then deduplicate by source URL and raw hash
+   against PostgreSQL and earlier records in the request. A valid lowercase
+   SHA-256 `source_record_hash` is preserved; otherwise the cleaned, validated
+   record is hashed as canonical JSON. Existing jobs retain null raw hashes.
+2. Use a deterministic extraction when title, description and parseable source
+   skills are present. Otherwise group records into sequential LLM batches.
+3. Preserve content-hash business deduplication and skill evidence checks, then
+   persist each record under a savepoint. Errors use the original 1-based record
+   index and are sorted by that index.
+
+VietJobs `technical_skills` do not distinguish required and preferred skills,
+so they are stored as `required`. Explicit `required_skills` take priority;
+`preferred_skills` remain preferred. Source skill strings support safe Python
+list literals or comma, semicolon and newline delimiters. Skill evidence includes
+the source title, description and original technical-skills field. Location,
+employment type and experience are preserved or parsed from source fields.
+
+`LLM_BATCH_SIZE` defaults to 8 (1–25). `LLM_REQUESTS_PER_MINUTE` defaults to 0
+(unlimited); a positive value up to 1000 spaces request starts by `60 / RPM`
+seconds, including retries and split batches. The limiter is shared within an
+API process; separate workers or deployments need their own quota allocation.
+`LLM_STRUCTURED_FAST_PATH=false` forces validated, unique records through the LLM
+for debugging or comparison. Batches send only title, company, location,
+employment type, description, source URL and technical skills. Source company
+always wins; other supplied title/location/employment type/source URL values
+override model output.
+
+With no split fallback, budget up to
+`ceil(llm_records / LLM_BATCH_SIZE) × (1 + LLM_MAX_RETRIES)` requests. A whole
+batch failure retries, then recursively splits the batch in half, so repeated
+failures can exceed this estimate. Missing or ambiguous response indices fail
+only the corresponding records. Re-delivery of already persisted raw records
+makes zero LLM calls; legacy jobs with null raw hashes still use source-URL and
+content-hash deduplication. One INFO line per successful import request reports
+`processed`, `skipped_before_llm`, `deterministic`, `llm_records`, `llm_calls`
+and `failed` without logging job text.
+
+CV search queries combine extracted summary, recognized skill names, projects,
+experience and education in that order, capped at 2,000 characters. Raw CV text
+and skill-evidence strings are excluded. CV-match scoring weights remain unchanged.
 
 The included fixture intentionally contains aliases, a duplicate source URL, and
 one invalid record. Automated tests replace the LLM extractor with a deterministic
@@ -170,8 +274,6 @@ EMBEDDING_API_KEY=
 EMBEDDING_DIMENSIONS=768
 HYBRID_CANDIDATE_LIMIT=20
 RRF_K=60
-RERANKER_MODEL=gemini-3.5-flash
-RERANKER_API_KEY=
 RERANKER_TIMEOUT_SECONDS=30
 RERANKER_MAX_CANDIDATES=20
 QDRANT_URL=http://qdrant:6333
@@ -180,8 +282,8 @@ QDRANT_COLLECTION=jobs
 
 Dense and hybrid retrieval require `EMBEDDING_API_KEY`, independently of the chat
 model. Missing this key is a configuration error; there is no keyword fallback.
-Neither key belongs in source control. The reranker uses `RERANKER_API_KEY` or
-`LLM_API_KEY` for Gemini, otherwise the local Ollama URL. Google document and query
+Neither key belongs in source control. The reranker uses `DEEPSEEK_API_KEY` and
+`DEEPSEEK_MODEL`. Google document and query
 embeddings use the retrieval-specific task types and vectors are normalized before
 Qdrant cosine search.
 
@@ -260,11 +362,9 @@ API.
 
 ## SQL/Search tools and LangGraph agent
 
-Configure the agent model and a dedicated PostgreSQL read-only account:
+Configure the agent and a dedicated PostgreSQL read-only account:
 
 ```dotenv
-AGENT_MODEL=gemini-3.5-flash
-AGENT_API_KEY=
 AGENT_TIMEOUT_SECONDS=30
 AGENT_MAX_RETRIES=1
 AGENT_SEARCH_LIMIT=5
@@ -276,9 +376,7 @@ POSTGRES_READONLY_PASSWORD=choose-a-local-password
 READONLY_DATABASE_URL=postgresql+psycopg://career_readonly:choose-a-local-password@postgres:5432/career
 ```
 
-`AGENT_API_KEY` falls back to the local `LLM_API_KEY`; without either key the agent
-uses `OLLAMA_BASE_URL`. Never commit either key or a
-real database password. On a fresh PostgreSQL volume, Compose creates the read-only
+The router and SQL generator use `DEEPSEEK_API_KEY` and `DEEPSEEK_MODEL`. Never commit API keys or a real database password. On a fresh PostgreSQL volume, Compose creates the read-only
 role automatically. With an existing volume, run the idempotent setup script once
 after adding the two `POSTGRES_READONLY_*` values to `.env`:
 

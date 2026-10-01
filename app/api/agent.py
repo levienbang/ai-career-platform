@@ -7,18 +7,14 @@ from sqlalchemy.orm import Session
 from app.config import Settings, get_settings
 from app.db.session import get_db
 from app.graph.builder import CareerAgent
+from app.graph.factory import build_career_agent
 from app.graph.router import (
     AgentRouterConfigurationError,
     AgentRoutingError,
     QuestionRouter,
     build_question_router,
 )
-from app.retrieval.embeddings import build_embedding_provider
-from app.retrieval.factory import build_reranked_search_service
-from app.retrieval.qdrant import build_qdrant_client
-from app.retrieval.reranker import build_reranker
 from app.schemas.agent import AgentResponse, AnalyticsResponse, NaturalLanguageQuery
-from app.tools.search_tool import RerankedJobSearchTool
 from app.tools.sql_tool import (
     SQLAnalyticsTool,
     SQLExecutionError,
@@ -27,7 +23,6 @@ from app.tools.sql_tool import (
     SQLValidationError,
     build_sql_tool,
 )
-from app.tracing import build_agent_callbacks
 
 router = APIRouter(tags=["agent"])
 
@@ -66,40 +61,12 @@ def _raise_sql_http_error(error: Exception) -> NoReturn:
     raise error
 
 
-class _LazySQLTool:
-    def __init__(self, settings: Settings) -> None:
-        self.settings = settings
-
-    def invoke(self, question: str, *, job_ids: list[int] | None = None):
-        return build_sql_tool(self.settings).invoke(question, job_ids=job_ids)
-
-
-class _LazyRerankedSearchTool:
-    def __init__(self, db: Session, settings: Settings) -> None:
-        self.db = db
-        self.settings = settings
-
-    def invoke(self, query: str, limit: int = 5):
-        embedder = build_embedding_provider(self.settings)
-        client = build_qdrant_client(self.settings.qdrant_url, self.settings.qdrant_timeout_seconds)
-        reranker = build_reranker(self.settings)
-        backend = build_reranked_search_service(self.db, embedder, client, reranker, self.settings)
-        return RerankedJobSearchTool(backend).invoke(query, limit)
-
-
 def get_career_agent(
     db: Annotated[Session, Depends(get_db)],
     settings: Annotated[Settings, Depends(get_settings)],
     question_router: Annotated[QuestionRouter, Depends(get_question_router)],
 ) -> CareerAgent:
-    return CareerAgent(
-        question_router,
-        _LazySQLTool(settings),
-        _LazyRerankedSearchTool(db, settings),
-        search_limit=settings.agent_search_limit,
-        tool_max_retries=settings.agent_tool_max_retries,
-        callbacks=build_agent_callbacks(settings),
-    )
+    return build_career_agent(db, settings, question_router)
 
 
 @router.post("/analytics/query", response_model=AnalyticsResponse)

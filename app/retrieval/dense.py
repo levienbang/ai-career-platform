@@ -30,7 +30,7 @@ class DenseSearchService:
             job_id=int(payload["job_id"]),
             score=score,
             title=str(payload["title"]),
-            company=str(payload["company"]),
+            company=payload.get("company"),
             location=payload.get("location"),
             employment_type=payload.get("employment_type"),
             experience_years_min=payload.get("experience_years_min"),
@@ -43,6 +43,14 @@ class DenseSearchService:
         if not self._collection_exists():
             raise SearchIndexNotReadyError(
                 f"Qdrant collection '{self.collection_name}' does not exist; index jobs first"
+            )
+        try:
+            info = self.client.get_collection(self.collection_name)
+        except Exception as error:
+            raise VectorStoreUnavailableError("Qdrant is unavailable") from error
+        if info.points_count == 0:
+            raise SearchIndexNotReadyError(
+                f"Qdrant collection '{self.collection_name}' is empty; index jobs first"
             )
         vector = self.embedder.embed_query(query)
         if len(vector) != self.embedder.dimensions:

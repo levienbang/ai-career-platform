@@ -10,7 +10,7 @@ from app.retrieval.embeddings import (
 def test_embedding_provider_requires_api_key() -> None:
     settings = Settings(
         embedding_api_key=None,
-        llm_api_key="chat-only-key",
+        deepseek_api_key="chat-only-key",
         _env_file=None,
     )
 

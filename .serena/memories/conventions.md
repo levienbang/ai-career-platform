@@ -4,7 +4,7 @@
 - Add or update tests for every behavior change; deterministic fake extractors, embedders, rerankers, and in-memory/test services avoid paid provider calls.
 - Ruff: 100-character line length, Python 3.12 target; lint families E, F, I, B, UP.
 - Expected failures require explicit error handling; never hide failing checks.
-- Ingestion uses controlled canonical skill taxonomy; unknown skills fail validation until an alias is deliberately added. Duplicate protection covers source URL and normalized-content hash.
+- Ingestion preserves curated skill aliases and accepts new job skills only when the source title/description contains matching evidence; these are stored with origin=extracted for review. CV extraction never creates skills. Milestone 10 ingestion prepares all records before extraction: source URL and nullable unique jobs.raw_hash dedup run before deterministic structured-source extraction or sequential LLM batches; normalized-content hash remains the business dedup layer. technical_skills count as source evidence and are required skills unless explicitly categorized. Batch retries/splits and RPM throttling run in the extractor; persistence retains per-record savepoints inside one request transaction. Seed with --taxonomy-only on a fresh DB for real-data CV matching.
 - Dense index uses PostgreSQL `job_id` as Qdrant point ID for idempotent upsert. PostgreSQL and Qdrant synchronize only on explicit indexing in current scope.
 - Hybrid retrieval fuses independent BM25 and dense ranks with RRF; do not add raw BM25/cosine scores because scales differ.
 - Reranker must return every bounded candidate ID exactly once; unknown, missing, or duplicate IDs are errors, and provider/config/timeout failures are not silently downgraded.

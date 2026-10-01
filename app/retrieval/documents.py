@@ -29,16 +29,10 @@ def build_search_document(job: Job) -> SearchDocument:
 
     required_skills = _skill_names(job, RequirementType.REQUIRED)
     preferred_skills = _skill_names(job, RequirementType.PREFERRED)
-    experience = (
-        f"{job.experience_years_min} years"
-        if job.experience_years_min is not None
-        else "Not specified"
-    )
     fields = [
         f"Title: {job.title}",
         f"Location: {job.location or 'Not specified'}",
         f"Employment type: {job.employment_type or 'Not specified'}",
-        f"Minimum experience: {experience}",
         f"Required skills: {', '.join(required_skills) or 'Not specified'}",
         f"Preferred skills: {', '.join(preferred_skills) or 'Not specified'}",
         f"Description: {job.description}",
@@ -50,7 +44,7 @@ def build_search_document(job: Job) -> SearchDocument:
         payload={
             "job_id": job.id,
             "title": job.title,
-            "company": job.company.name,
+            "company": job.company.name if job.company else None,
             "location": job.location,
             "employment_type": job.employment_type,
             "experience_years_min": job.experience_years_min,

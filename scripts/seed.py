@@ -1,3 +1,4 @@
+import argparse
 import json
 from hashlib import sha256
 from pathlib import Path
@@ -15,18 +16,23 @@ def load_seed_data() -> dict[str, Any]:
     return json.loads(SEED_DATA_FILE.read_text(encoding="utf-8"))
 
 
-def seed() -> None:
+def seed(*, taxonomy_only: bool = False) -> None:
     seed_data = load_seed_data()
     taxonomy = seed_data["taxonomy"]
-    sample_jobs = seed_data["jobs"]
+    sample_jobs = [] if taxonomy_only else seed_data["jobs"]
     with SessionLocal.begin() as session:
         skills: dict[str, Skill] = {}
         for name, definition in taxonomy.items():
             skill = session.scalar(select(Skill).where(Skill.canonical_name == name))
             if skill is None:
-                skill = Skill(canonical_name=name, category=definition["category"])
+                skill = Skill(
+                    canonical_name=name, category=definition["category"], origin="curated"
+                )
                 session.add(skill)
                 session.flush()
+            else:
+                skill.origin = "curated"
+                skill.category = definition["category"]
             skills[name] = skill
 
         for canonical_name, definition in taxonomy.items():
@@ -65,5 +71,8 @@ def seed() -> None:
 
 
 if __name__ == "__main__":
-    seed()
-    print("Sample data is ready.")
+    parser = argparse.ArgumentParser(description="Seed skills and optional demo jobs")
+    parser.add_argument("--taxonomy-only", action="store_true", help="Seed skills and aliases only")
+    args = parser.parse_args()
+    seed(taxonomy_only=args.taxonomy_only)
+    print("Taxonomy is ready." if args.taxonomy_only else "Sample data is ready.")

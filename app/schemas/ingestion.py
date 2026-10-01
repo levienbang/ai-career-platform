@@ -42,7 +42,7 @@ class JobExtraction(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     title: str = Field(min_length=1)
-    company: str = Field(min_length=1)
+    company: str | None = None
     location: str | None = None
     employment_type: str | None = None
     experience_years_min: int | None = Field(default=None, ge=0)
@@ -51,12 +51,27 @@ class JobExtraction(BaseModel):
     description: str = Field(min_length=1)
     source_url: HttpUrl | None = None
 
+    @field_validator("company", mode="before")
+    @classmethod
+    def empty_company_is_none(cls, value: Any) -> Any:
+        return None if isinstance(value, str) and not value.strip() else value
+
     _validate_required_skills = field_validator("required_skills", mode="before")(
         _clean_skill_values
     )
     _validate_preferred_skills = field_validator("preferred_skills", mode="before")(
         _clean_skill_values
     )
+
+
+class JobBatchItem(JobExtraction):
+    record_index: int = Field(ge=1)
+
+
+class JobBatchExtraction(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[JobBatchItem]
 
 
 class ImportErrorDetail(BaseModel):

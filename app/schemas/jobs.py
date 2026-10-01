@@ -25,7 +25,7 @@ class JobResponse(BaseModel):
 
     id: int
     title: str
-    company: CompanySummary
+    company: CompanySummary | None
     location: str | None
     employment_type: str | None
     description: str

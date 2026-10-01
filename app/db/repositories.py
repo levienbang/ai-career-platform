@@ -78,6 +78,9 @@ class JobRepository:
     def get_by_content_hash(self, content_hash: str) -> Job | None:
         return self.session.scalar(select(Job).where(Job.content_hash == content_hash))
 
+    def get_by_raw_hash(self, raw_hash: str) -> Job | None:
+        return self.session.scalar(select(Job).where(Job.raw_hash == raw_hash))
+
     def add(self, job: Job) -> Job:
         self.session.add(job)
         return job

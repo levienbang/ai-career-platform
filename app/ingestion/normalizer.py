@@ -2,6 +2,8 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import RequirementType, Skill
@@ -26,27 +28,40 @@ def skill_lookup_key(value: str) -> str:
     return re.sub(r"\s+", " ", normalized).strip().casefold()
 
 
+def skill_match_key(value: str) -> str:
+    return re.sub(r"[\s.\-_/]", "", skill_lookup_key(value))
+
+
 class SkillNormalizer:
     def __init__(self, session: Session) -> None:
+        self._session = session
         self._taxonomy: dict[str, Skill] = {}
+        self._wordings: dict[int, set[str]] = {}
         for skill in SkillRepository(session).list_with_aliases():
-            self._taxonomy[skill_lookup_key(skill.canonical_name)] = skill
+            self._taxonomy.setdefault(skill_match_key(skill.canonical_name), skill)
+            self._wordings[skill.id] = {skill_lookup_key(skill.canonical_name)}
             for alias in skill.aliases:
-                self._taxonomy[skill_lookup_key(alias.alias)] = skill
+                self._taxonomy.setdefault(skill_match_key(alias.alias), skill)
+                self._wordings[skill.id].add(skill_lookup_key(alias.alias))
 
     def resolve(self, value: str) -> Skill | None:
-        return self._taxonomy.get(skill_lookup_key(value))
+        return self._taxonomy.get(skill_match_key(value))
 
     def evidence_mentions(self, skill: Skill, evidence: str) -> bool:
-        for wording, candidate in self._taxonomy.items():
-            if candidate.id == skill.id and re.search(
+        for wording in self._wordings.get(skill.id, set()):
+            if re.search(
                 rf"(?<!\w){re.escape(wording)}(?!\w)", skill_lookup_key(evidence)
             ):
                 return True
         return False
 
     def normalize(
-        self, required_skills: list[str], preferred_skills: list[str]
+        self,
+        required_skills: list[str],
+        preferred_skills: list[str],
+        *,
+        evidence_text: str | None = None,
+        create_missing: bool = True,
     ) -> list[NormalizedJobSkill]:
         normalized: list[NormalizedJobSkill] = []
         unknown: list[str] = []
@@ -57,11 +72,38 @@ class SkillNormalizer:
             (RequirementType.PREFERRED, preferred_skills),
         ):
             for evidence in values:
-                skill = self._taxonomy.get(skill_lookup_key(evidence))
-                if skill is None:
-                    if evidence not in unknown:
-                        unknown.append(evidence)
+                name = " ".join(unicodedata.normalize("NFKC", evidence).split())
+                if not name or len(name) > 100:
                     continue
+                key = skill_lookup_key(name)
+                skill = self.resolve(name)
+                if skill is not None and evidence_text is not None:
+                    if not self.evidence_mentions(skill, evidence_text):
+                        continue
+                if skill is None:
+                    if len(name.split()) > 5 or len(name) > 50:
+                        continue
+                    if evidence_text is None or not re.search(
+                        rf"(?<!\w){re.escape(key)}(?!\w)", skill_lookup_key(evidence_text)
+                    ):
+                        continue
+                    if not create_missing:
+                        if name not in unknown:
+                            unknown.append(name)
+                        continue
+                    try:
+                        with self._session.begin_nested():
+                            skill = Skill(canonical_name=name, category=None, origin="extracted")
+                            self._session.add(skill)
+                            self._session.flush()
+                    except IntegrityError:
+                        skill = self._session.scalar(
+                            select(Skill).where(func.lower(Skill.canonical_name) == name.lower())
+                        )
+                        if skill is None:
+                            raise
+                    self._taxonomy[skill_match_key(name)] = skill
+                    self._wordings[skill.id] = {key}
                 if skill.id in seen_skill_ids:
                     continue
                 seen_skill_ids.add(skill.id)
@@ -69,7 +111,7 @@ class SkillNormalizer:
                     NormalizedJobSkill(
                         skill=skill,
                         requirement_type=requirement_type,
-                        evidence_text=evidence,
+                        evidence_text=name,
                     )
                 )
 
