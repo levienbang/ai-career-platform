@@ -11,3 +11,6 @@ dist/
 build/
 *.egg-info/
 .DS_Store
+
+# Local editor/R session files
+.Rhistory
