@@ -17,3 +17,6 @@ build/
 
 # Saved Streamlit demo conversations
 demo/.chats/
+
+# Saved skill-learning dry-run decisions
+skill_learning_proposals.json

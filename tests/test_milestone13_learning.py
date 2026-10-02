@@ -521,3 +521,29 @@ def test_opposite_alias_decisions_collapse_to_one_canonical(db_session):
     assert [(link.skill_id, link.requirement_type) for link in links] == [
         (canonical.id, RequirementType.REQUIRED)
     ]
+
+
+def test_apply_saved_dry_run_without_calling_llm_again(db_session, monkeypatch, tmp_path):
+    canonical = Skill(canonical_name="Scikit-learn")
+    old = Skill(canonical_name="Scikit learn lib", origin="extracted")
+    db_session.add_all([canonical, old])
+    db_session.commit()
+    job = add_link(db_session, old, "Scikit learn lib", 1)
+    canonical_id = canonical.id
+    monkeypatch.setattr(learn_script, "SessionLocal", sessionmaker(bind=db_session.get_bind()))
+    settings = Settings(_env_file=None)
+    saved = tmp_path / "proposals.json"
+
+    model = FakeModel(lambda _: {"decision": "same_as", "skill_id": canonical_id})
+    assert learn_script.learn_skill_aliases(model=model, settings=settings, save=saved) == 1
+    assert json.loads(saved.read_text())["proposals"][0]["decision"] == "alias"
+    db_session.commit()
+
+    failing = FakeModel(error=AssertionError("LLM must not be called when applying a file"))
+    calls = learn_script.learn_skill_aliases(
+        apply=True, model=failing, settings=settings, source=saved
+    )
+    assert calls == 0 and failing.calls == []
+    db_session.expire_all()
+    assert job.skills[0].skill_id == canonical_id
+    assert decision(db_session, "Scikit learn lib").decision == "alias"

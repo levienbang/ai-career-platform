@@ -1,48 +1,29 @@
-# Demo 2–3 phút (Swagger)
+# Demo (dữ liệu thật + Streamlit)
 
 ## Chuẩn bị
 
+API phải chạy với dữ liệu đã import và index (xem README, mục "Real jobs from Crawl
+and CV matching" và "Resumable indexing and skill learning").
+
 ```bash
-docker compose up --build -d
-docker compose exec api python -m scripts.seed
-docker compose exec api python -m scripts.index_jobs
+docker compose up -d                       # PostgreSQL, Qdrant, API (cổng 8000)
+cd demo && uv run streamlit run app.py     # giao diện chat (cổng 8501)
 ```
 
-Mở <http://localhost:8000/docs>. Các endpoint dùng embedding hoặc LLM thật cần
-API key riêng; buổi demo không có key dùng keyword search, `/ready`, và kết quả
-evaluation deterministic. Chỉ dùng dữ liệu job mẫu và CV PDF giả.
+Mở <http://localhost:8501>. Swagger vẫn ở <http://localhost:8000/docs>.
 
-## Kịch bản
+## Kịch bản 3 phút
 
-1. **0:00–0:30 — Hệ thống và dữ liệu:** mở `GET /ready`, cho thấy API, PostgreSQL,
-   Qdrant sẵn sàng. Mở `GET /jobs` và một job mẫu; giải thích PostgreSQL lưu job
-   và taxonomy, Qdrant lưu vector sau bước index.
-2. **0:30–1:10 — Ingestion và tìm kiếm:** mở `POST /search/keyword`, tìm
-   `computer vision internship`. Chỉ ra ID, kỹ năng và nguồn job trong kết quả.
-   Nếu có key, có thể so sánh dense/hybrid/reranked bằng cùng câu hỏi.
-3. **1:10–1:50 — Agent và an toàn:** trình bày `POST /agent/query` và
-   `POST /analytics/query` trong Swagger. Nếu không có key, dùng kết quả
-   `evaluation/milestone7_results.json` để giải thích route giả và SQL đã được
-   xác thực trên PostgreSQL. Minh họa test từ chối `DELETE FROM jobs`.
-4. **1:50–2:30 — CV và evaluation:** giải thích `POST /cv/upload` nhận PDF giả,
-   evidence quote, alias normalization và gap score. Không gọi endpoint live khi
-   không có key cho extractor; chỉ rõ kết quả test dùng fake extractor. Trình bày
-   39 case, bốn phương pháp retrieval, latency và failure analysis trong README.
-5. **2:30–3:00 — Giới hạn:** nêu rõ chưa đo chất lượng LLM live hay remote trace
-   nếu thiếu key, và Qdrant cần index sau khi import.
+1. **Thống kê (SQL):** gõ *"Có bao nhiêu job software ở Hồ Chí Minh?"* → route `sql`,
+   bảng kết quả và câu SQL do LLM sinh (chạy bằng tài khoản chỉ đọc).
+2. **Tìm job theo nghĩa:** gõ *"Tìm job AI engineer cho người biết PyTorch"* → route
+   `search`, danh sách job xếp hạng hybrid + rerank.
+3. **Hỏi tiếp có ngữ cảnh:** gõ *"còn ở Hà Nội thì sao?"* → 5 lượt chat gần nhất được
+   ghép vào câu hỏi (xem mục "Query đã gửi").
+4. **CV:** kéo một CV PDF vào khung chat → `/cv/match` trả skill nhận diện được và
+   top job với điểm final / semantic / skill.
+5. **Skill gap:** bấm "Phân tích skill gap" → `/cv/upload` liệt kê skill bắt buộc còn
+   thiếu, xếp theo tỉ lệ job yêu cầu.
 
-Không ghi hình CV cá nhân, token hoặc mật khẩu. Video demo là deliverable thủ
-công; tài liệu này là kịch bản thực hiện.
-
-## Checklist trước khi ghi hình
-
-- [ ] Dùng job/CV synthetic và đóng mọi tab chứa `.env`, API key hoặc dữ liệu cá nhân.
-- [ ] Xác nhận `/health`, `/ready` trả HTTP 200 và job seed hiện trong `/jobs`.
-- [ ] Chạy `python -m evaluation.evaluate_milestone7` trên database chỉ có 12 seed jobs;
-      chỉ gọi metric này là **deterministic/fake**, không gọi là model accuracy.
-- [ ] Nếu muốn demo `/agent/query` hoặc dense/hybrid/reranked live, cấu hình và
-      chạy thử model/embedding key trước; bỏ phần live nếu provider lỗi.
-- [ ] Nêu rõ E2E import-to-answer đã chạy trên PostgreSQL/Qdrant thật nhưng
-      extractor/router/embedding/reranker của test là fake.
-- [ ] Quay 2–3 phút theo mốc thời gian trên; kiểm tra lại video không lộ secret
-      và không nói các metric lịch sử như kết quả audit hiện tại.
+Mỗi câu hỏi agent tốn 2–3 lượt DeepSeek; mỗi CV tốn 1 lượt DeepSeek và 1 request
+embedding. Chỉ dùng CV của chính mình hoặc CV giả.

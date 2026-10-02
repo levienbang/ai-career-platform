@@ -126,3 +126,41 @@ def test_rpm_throttle_and_wrapped_errors(db_session, qdrant_client):
     service = index(qdrant_client, embedder, clock, embedding_requests_per_minute=2)
     assert service.index_all(db_session).indexed == 45
     assert clock.sleeps == [30, 20, 10, 30]
+
+
+def test_payload_refresh_updates_display_without_embedding(db_session, qdrant_client):
+    jobs = make_jobs(db_session, count=3)
+    clock = Clock()
+    embedder = Embedder(qdrant_client)
+    service = index(qdrant_client, embedder, clock)
+    service.index_all(db_session)
+    calls_after_index = len(embedder.calls)
+
+    jobs[0].location = "Hà Nội"
+    jobs[0].skills.append(
+        JobSkill(
+            skill=Skill(canonical_name="Scikit-learn"), requirement_type=RequirementType.REQUIRED
+        )
+    )
+    db_session.commit()
+    refreshed = QdrantJobIndex(
+        qdrant_client, None, "jobs", settings=Settings(_env_file=None)
+    ).refresh_payloads(db_session)
+
+    assert refreshed.refreshed == 3
+    assert len(embedder.calls) == calls_after_index  # no embedding happened
+    payload = qdrant_client.retrieve("jobs", ids=[jobs[0].id], with_payload=True)[0].payload
+    assert payload["location"] == "Hà Nội"
+    assert payload["required_skills"] == ["Scikit-learn"]
+    # Hashes match the new text, so incremental indexing does not re-embed.
+    assert service.index_all(db_session).skipped == 3
+    assert len(embedder.calls) == calls_after_index
+
+
+def test_payload_refresh_requires_existing_collection(db_session, qdrant_client):
+    from app.retrieval.qdrant import SearchIndexNotReadyError
+
+    with pytest.raises(SearchIndexNotReadyError, match="index jobs first"):
+        QdrantJobIndex(
+            qdrant_client, None, "missing", settings=Settings(_env_file=None)
+        ).refresh_payloads(db_session)

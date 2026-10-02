@@ -34,6 +34,7 @@ class IndexResult:
     indexed: int
     deleted: int
     skipped: int = 0
+    refreshed: int = 0
 
 
 def document_hash(document: SearchDocument) -> str:
@@ -74,7 +75,7 @@ class QdrantJobIndex:
     def __init__(
         self,
         client: QdrantClient,
-        embedder: EmbeddingProvider,
+        embedder: EmbeddingProvider | None,
         collection_name: str,
         *,
         settings: Settings | None = None,
@@ -234,6 +235,36 @@ class QdrantJobIndex:
         return IndexResult(
             indexed=indexed, deleted=len(stale_ids), skipped=len(documents) - len(changed)
         )
+
+    def refresh_payloads(self, session: Session) -> IndexResult:
+        """Rewrite display payloads and hashes of indexed jobs without embedding.
+
+        Use after changes that keep a job's meaning, such as renamed or merged
+        skills or location casing: Qdrant shows the new values and the next
+        incremental index does not re-embed those jobs. Jobs not yet in Qdrant are
+        left for index_all.
+        """
+        if not self._collection_exists():
+            raise SearchIndexNotReadyError(
+                f"Qdrant collection '{self.collection_name}' does not exist; index jobs first"
+            )
+        indexed = self._indexed_documents()
+        refreshed = 0
+        try:
+            for job in JobRepository(session).list_all():
+                if job.id not in indexed:
+                    continue
+                document = build_search_document(job)
+                self.client.set_payload(
+                    collection_name=self.collection_name,
+                    payload={**document.payload, "document_hash": document_hash(document)},
+                    points=[job.id],
+                    wait=False,
+                )
+                refreshed += 1
+        except Exception as error:
+            raise VectorStoreUnavailableError("Could not refresh Qdrant payloads") from error
+        return IndexResult(indexed=0, deleted=0, refreshed=refreshed)
 
     def index_job(self, session: Session, job_id: int) -> IndexResult:
         job = JobRepository(session).get(job_id)

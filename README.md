@@ -550,7 +550,7 @@ terminal failure counts in `docker compose logs api`.
 
 The Dockerfile installs dependencies before copying application code, so changing
 `app/` reuses the dependency layer; the dev Compose override still uses `.[dev]`.
-See `docs/MILESTONE12_REPORT.md` for validation and measured build timings.
+See `docs/milestones/MILESTONE12_REPORT.md` for validation and measured build timings.
 
 
 ## Resumable indexing and skill learning (Milestone 13)
@@ -565,11 +565,12 @@ docker compose up --build -d
 docker compose exec api alembic upgrade head
 docker compose exec api python scripts/seed.py --taxonomy-only
 # Import extended JSON/CSV through POST /jobs/import, then optionally process old skills:
-docker compose exec api python scripts/learn_skill_aliases.py
-docker compose exec api python scripts/learn_skill_aliases.py --apply
+docker compose exec api python scripts/learn_skill_aliases.py          # dry-run, saves decisions
+docker compose exec api python scripts/learn_skill_aliases.py --apply --from skill_learning_proposals.json
 docker compose exec api python scripts/merge_skills.py
 docker compose exec api python scripts/merge_skills.py --apply
-docker compose exec api python scripts/index_jobs.py
+docker compose exec api python scripts/index_jobs.py --payload-only    # renamed skills, no embedding
+docker compose exec api python scripts/index_jobs.py                   # embed new jobs only
 ```
 
 `SKILL_DATA_DIR` defaults to `data` relative to the application's working directory
@@ -592,14 +593,21 @@ candidates (`difflib`, without an extra dependency). Calls use the existing LLM 
 throttle and batches of `SKILL_ALIAS_BATCH_SIZE` (default **40**, range 1–100).
 `SKILL_ALIAS_AUTO_CONFIDENCE` defaults to **0.9** (range 0.5–1): an eligible
 `same_as` creates an alias and uses the canonical skill; `new` creates an extracted
-skill with the returned category. Low confidence or invalid candidate IDs become
-`pending`. `data/skill_alias_blocklist.json` blocks distinct concepts in both
+skill with the returned category once its confidence reaches
+`SKILL_ALIAS_NEW_CONFIDENCE` (default **0.7**; keeping a name is lower risk than
+merging). A `same_as` that points at the name's own skill counts as keeping it.
+Low confidence or invalid candidate IDs become `pending`. Before applying, alias
+decisions are grouped so opposite directions (`Excel` → `MS Excel` and back)
+collapse to one canonical skill instead of merging into a removed one. `data/skill_alias_blocklist.json` blocks distinct concepts in both
 directions for learning and merging, even if the alias file proposes a merge.
 A model score is a confidence estimate, not a guarantee of correctness.
 
-Both maintenance commands default to dry-run; learning dry-run **still calls
-DeepSeek** but writes no database data. It prints each decision, proposed canonical,
-confidence and reason, plus the number of LLM calls. `--apply` commits in one
+Both maintenance commands default to dry-run. A learning dry-run **calls DeepSeek**
+but writes no database data; it prints each decision, proposed canonical, confidence
+and reason, plus the number of LLM calls, and saves the decisions to
+`skill_learning_proposals.json` (`--save PATH` to change). Apply that file with
+`--apply --from FILE` so DeepSeek is not called twice; names decided in the meantime
+are skipped. `--apply` commits in one
 transaction, moves existing job links, preserves evidence for duplicate links and
 prefers required over preferred links. Import logs report extraction `llm_calls`
 and separate `alias_llm_calls`. Matching a known alias or cached decision needs no
@@ -613,7 +621,7 @@ docker compose exec api python scripts/review_skill_decisions.py list --decision
 docker compose exec api python scripts/review_skill_decisions.py approve "Scikit learn lib" --as "Scikit-learn"
 docker compose exec api python scripts/review_skill_decisions.py keep-new "Separate tool"
 docker compose exec api python scripts/review_skill_decisions.py revert "Scikit learn lib"
-docker compose exec api python scripts/index_jobs.py
+docker compose exec api python scripts/index_jobs.py --payload-only
 ```
 
 Approve/keep-new require a pending decision. Approve uses the same blocklist and
@@ -635,6 +643,13 @@ Progress prints `indexed X/Y` for changed jobs and final `indexed`, `skipped`,
 jobs, including after changing the embedding model without changing dimensions.
 Dimension changes still require rebuilding the Qdrant collection.
 
+`python scripts/index_jobs.py --payload-only` rewrites the stored payload (title,
+location, skills, search text and `document_hash`) of already indexed jobs **without
+embedding** and needs no Google key. Use it after changes that keep a job's meaning,
+such as merged or renamed skills: results show the new names and the next
+incremental run does not re-embed those jobs. Jobs not yet in Qdrant still need a
+normal run.
+
 | Environment variable | Default | Range / behavior |
 |---|---:|---|
 | `EMBEDDING_BATCH_SIZE` | 20 | 1–100 jobs per embed/upsert batch |
@@ -647,4 +662,4 @@ and other 4xx errors are not retried. When retries run out, the error states how
 many jobs were saved; rerun the command to resume. For a restrictive Google quota,
 start with batch size **10** and **1** request/minute and adjust to the actual token
 and daily limits. RPM spacing does not guarantee staying within token/day quotas.
-Read `docs/MILESTONE13_REPORT.md` for checks, Docker verification and limitations.
+Read `docs/milestones/MILESTONE13_REPORT.md` for checks, Docker verification and limitations.
