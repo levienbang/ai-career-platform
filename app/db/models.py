@@ -96,6 +96,9 @@ class Skill(Base):
 
 class SkillAlias(Base):
     __tablename__ = "skill_aliases"
+    __table_args__ = (
+        CheckConstraint("source IN ('curated', 'merge', 'llm')", name="ck_skill_aliases_source"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     skill_id: Mapped[int] = mapped_column(
@@ -103,7 +106,36 @@ class SkillAlias(Base):
     )
     alias: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
 
+    source: Mapped[str] = mapped_column(String(20), nullable=False, server_default="curated")
+    confidence: Mapped[Decimal | None] = mapped_column(Numeric(3, 2))
+    reason: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
     skill: Mapped[Skill] = relationship(back_populates="aliases")
+
+
+class SkillDecision(Base):
+    __tablename__ = "skill_decisions"
+    __table_args__ = (
+        CheckConstraint(
+            "decision IN ('alias', 'new', 'pending', 'rejected')",
+            name="ck_skill_decisions_decision",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    match_key: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    decision: Mapped[str] = mapped_column(String(20), nullable=False)
+    skill_id: Mapped[int | None] = mapped_column(ForeignKey("skills.id", ondelete="SET NULL"))
+    confidence: Mapped[Decimal | None] = mapped_column(Numeric(3, 2))
+    reason: Mapped[str | None] = mapped_column(Text)
+    model: Mapped[str | None] = mapped_column(String(100))
+    decided_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
 
 class JobSkill(Base):

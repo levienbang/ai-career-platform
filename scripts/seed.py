@@ -6,14 +6,24 @@ from typing import Any
 
 from sqlalchemy import select
 
-from app.db.models import Company, Job, JobSkill, RequirementType, Skill, SkillAlias
+from app.db.models import Company, Job, JobSkill, RequirementType
 from app.db.session import SessionLocal
+from app.services.skill_taxonomy import load_skill_aliases, load_skill_blocklist, seed_taxonomy
 
 SEED_DATA_FILE = Path(__file__).parents[1] / "data" / "seed_data.json"
 
 
 def load_seed_data() -> dict[str, Any]:
-    return json.loads(SEED_DATA_FILE.read_text(encoding="utf-8"))
+    data = json.loads(SEED_DATA_FILE.read_text(encoding="utf-8"))
+    for name, definition in load_skill_aliases(
+        SEED_DATA_FILE.parent / "skill_aliases.json"
+    ).items():
+        previous = data["taxonomy"].get(name, {}).get("aliases", [])
+        data["taxonomy"][name] = {
+            "category": definition["category"],
+            "aliases": list(dict.fromkeys([*previous, *definition["aliases"]])),
+        }
+    return data
 
 
 def seed(*, taxonomy_only: bool = False) -> None:
@@ -21,24 +31,11 @@ def seed(*, taxonomy_only: bool = False) -> None:
     taxonomy = seed_data["taxonomy"]
     sample_jobs = [] if taxonomy_only else seed_data["jobs"]
     with SessionLocal.begin() as session:
-        skills: dict[str, Skill] = {}
-        for name, definition in taxonomy.items():
-            skill = session.scalar(select(Skill).where(Skill.canonical_name == name))
-            if skill is None:
-                skill = Skill(
-                    canonical_name=name, category=definition["category"], origin="curated"
-                )
-                session.add(skill)
-                session.flush()
-            else:
-                skill.origin = "curated"
-                skill.category = definition["category"]
-            skills[name] = skill
-
-        for canonical_name, definition in taxonomy.items():
-            for alias in definition["aliases"]:
-                if session.scalar(select(SkillAlias).where(SkillAlias.alias == alias)) is None:
-                    session.add(SkillAlias(skill=skills[canonical_name], alias=alias))
+        skills = seed_taxonomy(
+            session,
+            taxonomy,
+            blocklist=load_skill_blocklist(SEED_DATA_FILE.parent / "skill_alias_blocklist.json"),
+        )
 
         for item in sample_jobs:
             content_hash = sha256(item["description"].encode()).hexdigest()

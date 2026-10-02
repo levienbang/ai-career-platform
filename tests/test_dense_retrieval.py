@@ -30,7 +30,8 @@ def test_index_twice_upserts_without_duplicate_points(
     second_run = index.index_all(db_session)
 
     assert first_run.indexed == 2
-    assert second_run.indexed == 2
+    assert second_run.indexed == 0
+    assert second_run.skipped == 2
     assert qdrant_client.count("test_jobs", exact=True).count == 2
     point = qdrant_client.retrieve("test_jobs", ids=[first.id], with_payload=True)[0]
     assert point.payload["title"] == "Computer Vision Intern"

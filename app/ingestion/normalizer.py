@@ -47,13 +47,32 @@ class SkillNormalizer:
     def resolve(self, value: str) -> Skill | None:
         return self._taxonomy.get(skill_match_key(value))
 
-    def evidence_mentions(self, skill: Skill, evidence: str) -> bool:
-        for wording in self._wordings.get(skill.id, set()):
-            if re.search(
-                rf"(?<!\w){re.escape(wording)}(?!\w)", skill_lookup_key(evidence)
-            ):
+    def evidence_mentions(self, skill: Skill, evidence: str, *, name: str | None = None) -> bool:
+        wordings = self._wordings.get(skill.id, set()).copy()
+        # A resolved spelling still needs literal, word-boundary evidence in the source.
+        if name is not None and self.resolve(name) is skill:
+            wordings.add(skill_lookup_key(name))
+        for wording in wordings:
+            if re.search(rf"(?<!\w){re.escape(wording)}(?!\w)", skill_lookup_key(evidence)):
                 return True
         return False
+
+    def unknown_names(self, values: list[str], evidence_text: str) -> list[str]:
+        """Only grounded, short names enter learning; retry undecided extracted skills."""
+        names = []
+        for value in values:
+            name = " ".join(unicodedata.normalize("NFKC", value).split())
+            skill = self.resolve(name)
+            if skill is not None and skill.origin != "extracted":
+                continue
+            if not name or len(name) > 50 or len(name.split()) > 5:
+                continue
+            if re.search(
+                rf"(?<!\w){re.escape(skill_lookup_key(name))}(?!\w)",
+                skill_lookup_key(evidence_text),
+            ):
+                names.append(name)
+        return names
 
     def normalize(
         self,
@@ -78,7 +97,7 @@ class SkillNormalizer:
                 key = skill_lookup_key(name)
                 skill = self.resolve(name)
                 if skill is not None and evidence_text is not None:
-                    if not self.evidence_mentions(skill, evidence_text):
+                    if not self.evidence_mentions(skill, evidence_text, name=name):
                         continue
                 if skill is None:
                     if len(name.split()) > 5 or len(name) > 50:

@@ -99,7 +99,9 @@ def _raise_retrieval_http_error(error: Exception) -> NoReturn:
             status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
         ) from error
     if isinstance(error, SearchIndexNotReadyError):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(error)
+        ) from error
     if isinstance(error, CollectionConfigurationError):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
     if isinstance(error, (EmbeddingServiceError, VectorStoreUnavailableError)):
@@ -186,7 +188,7 @@ def index_jobs(
     client: QdrantDependency,
     settings: SettingsDependency,
 ) -> IndexResponse:
-    index = QdrantJobIndex(client, embedder, settings.qdrant_collection)
+    index = QdrantJobIndex(client, embedder, settings.qdrant_collection, settings=settings)
     try:
         result = (
             index.index_job(db, request.job_id)

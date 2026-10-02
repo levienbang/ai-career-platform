@@ -62,7 +62,7 @@ def test_dense_search_requires_an_index(client, fake_embedder, qdrant_client) ->
 
     response = client.post("/search/semantic", json={"query": "python"})
 
-    assert response.status_code == 409
+    assert response.status_code == 503
     assert "index jobs first" in response.json()["detail"]
 
 

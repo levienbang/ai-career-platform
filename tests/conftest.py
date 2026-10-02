@@ -142,3 +142,13 @@ def taxonomy(db_session: Session) -> dict[str, Skill]:
         skills[name] = skill
     db_session.commit()
     return skills
+
+
+@pytest.fixture(autouse=True)
+def prevent_paid_alias_calls(monkeypatch):
+    """Existing fake extraction tests must never accidentally use a local API key."""
+
+    def unavailable(*args, **kwargs):
+        raise RuntimeError("Tests require an explicit fake alias model")
+
+    monkeypatch.setattr("app.services.skill_learning.build_structured_chat_model", unavailable)

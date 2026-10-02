@@ -114,8 +114,8 @@ uv run python scripts/index_jobs.py
 curl -F 'file=@cv.pdf' -F 'limit=10' http://localhost:8000/cv/match
 ```
 
-`company` can be null. Skills with `origin=extracted` came from job text and
-have not been reviewed or merged into the curated taxonomy. Skills proposed by
+`company` can be null. Skills with `origin=extracted` came from job text;
+`skill_decisions` now records whether learning classified them as new or pending. Skills proposed by
 the extractor without a matching mention in the source job are discarded.
 CV matching combines dense semantic similarity with required and preferred
 skill coverage; it does not compare years of experience or call the LLM
@@ -302,7 +302,7 @@ docker compose exec api python -m scripts.index_jobs
 ```
 
 The point ID is the PostgreSQL `job_id`, so indexing a new or updated job performs an
-upsert instead of creating a duplicate. `POST /search/index` runs the same full sync;
+upsert instead of creating a duplicate. `POST /search/index` runs the same incremental sync (and removes stale points);
 passing `{"job_id": 123}` indexes one job. After ingestion, run one of these index
 operations. There is no background queue in Milestone 3, so PostgreSQL and Qdrant are
 briefly out of sync until this explicit step runs.
@@ -520,3 +520,131 @@ records one complete fake-model search run on real PostgreSQL and Qdrant. See
 [the audit and release notes](docs/PORTFOLIO_RELEASE.md)
 for the acceptance checklist, failure analysis, demo steps, and accurate GitHub/CV
 description.
+
+## Skill maintenance (Milestone 12)
+
+Skill resolution ignores spaces and `.`, `-`, `_`, `/`, while preserving `+` and
+`#`. Synonyms come from the reviewed 55-group `data/skill_aliases.json`; source
+and CV evidence still require literal wording with word boundaries. New extracted
+skills are limited to five words and 50 characters. Parenthesized source lists
+such as `Libraries (Scikit-learn, TensorFlow)` become individual skills.
+
+On existing data, preview merges first, apply them, seed reviewed aliases, then
+re-index before comparing CV results:
+
+```bash
+docker compose exec api python -m scripts.merge_skills
+docker compose exec api python -m scripts.merge_skills --apply
+docker compose exec api python -m scripts.seed --taxonomy-only
+docker compose exec api python -m scripts.index_jobs
+```
+
+The merge command defaults to dry-run; `--apply` commits all merges in one
+transaction. It preserves aliases and job links, removes duplicate links, and
+prefers required over preferred for the same skill/job. Seeding also merges
+existing extracted synonyms into curated canonical skills. Re-indexing requires
+the configured Google embedding key and makes the Qdrant skill names current.
+Search endpoints using dense retrieval return 503 when their collection is
+missing or empty. Extraction warnings include bounded, sanitized diagnostics and
+terminal failure counts in `docker compose logs api`.
+
+The Dockerfile installs dependencies before copying application code, so changing
+`app/` reuses the dependency layer; the dev Compose override still uses `.[dev]`.
+See `docs/MILESTONE12_REPORT.md` for validation and measured build timings.
+
+
+## Resumable indexing and skill learning (Milestone 13)
+
+For a fresh database, use this order. Import requests can already learn aliases;
+the explicit learning command also handles extracted skills from older imports.
+Chat uses the configured DeepSeek model with `DEEPSEEK_THINKING=disabled`;
+only Google handles embeddings. No embeddings are used for alias decisions.
+
+```bash
+docker compose up --build -d
+docker compose exec api alembic upgrade head
+docker compose exec api python scripts/seed.py --taxonomy-only
+# Import extended JSON/CSV through POST /jobs/import, then optionally process old skills:
+docker compose exec api python scripts/learn_skill_aliases.py
+docker compose exec api python scripts/learn_skill_aliases.py --apply
+docker compose exec api python scripts/merge_skills.py
+docker compose exec api python scripts/merge_skills.py --apply
+docker compose exec api python scripts/index_jobs.py
+```
+
+`SKILL_DATA_DIR` defaults to `data` relative to the application's working directory
+(`/app/data` in Docker); an empty value also means the default. Maintenance scripts
+locate the repository's `data` directory relative to their own file, so they work
+from another working directory and with a non-editable installed package.
+
+Aliases record their provenance: `curated` for the seeded alias file, `merge` for
+consolidation and deterministic canonical display corrections, and `llm` for
+accepted model decisions. LLM aliases also retain confidence, reason and creation
+time. `skill_decisions` caches every valid model decision by normalized match key:
+`alias`, `new`, `pending`, or reviewer `rejected`. New/pending/rejected names are
+not sent to the model again. Failed requests or invalid output create no decision,
+so a future import retries learning while the current job remains importable.
+Setting `SKILL_ALIAS_LEARNING=false` disables learning during import.
+
+Learning first checks literal source evidence and the five-word/50-character limit.
+It sends each unique unknown name with all curated skills plus ten string-nearest
+candidates (`difflib`, without an extra dependency). Calls use the existing LLM RPM
+throttle and batches of `SKILL_ALIAS_BATCH_SIZE` (default **40**, range 1–100).
+`SKILL_ALIAS_AUTO_CONFIDENCE` defaults to **0.9** (range 0.5–1): an eligible
+`same_as` creates an alias and uses the canonical skill; `new` creates an extracted
+skill with the returned category. Low confidence or invalid candidate IDs become
+`pending`. `data/skill_alias_blocklist.json` blocks distinct concepts in both
+directions for learning and merging, even if the alias file proposes a merge.
+A model score is a confidence estimate, not a guarantee of correctness.
+
+Both maintenance commands default to dry-run; learning dry-run **still calls
+DeepSeek** but writes no database data. It prints each decision, proposed canonical,
+confidence and reason, plus the number of LLM calls. `--apply` commits in one
+transaction, moves existing job links, preserves evidence for duplicate links and
+prefers required over preferred links. Import logs report extraction `llm_calls`
+and separate `alias_llm_calls`. Matching a known alias or cached decision needs no
+additional learning call. Canonical display names come from `skill_aliases.json`
+when that spelling does not collide with another skill's unique name.
+
+Review decisions with these commands (quote skill names containing spaces):
+
+```bash
+docker compose exec api python scripts/review_skill_decisions.py list --decision pending
+docker compose exec api python scripts/review_skill_decisions.py approve "Scikit learn lib" --as "Scikit-learn"
+docker compose exec api python scripts/review_skill_decisions.py keep-new "Separate tool"
+docker compose exec api python scripts/review_skill_decisions.py revert "Scikit learn lib"
+docker compose exec api python scripts/index_jobs.py
+```
+
+Approve/keep-new require a pending decision. Approve uses the same blocklist and
+merge logic without calling the model. Revert accepts only `source=llm` aliases,
+removes that alias, and separates an extracted skill only for links whose
+`evidence_text` contains that spelling. It preserves canonical claims with separate
+evidence and marks the decision `rejected` to stop new suggestions for that name.
+This is evidence-based reversal: it cannot restore historical links/requirement
+strength for evidence absent before a merge. Migration downgrade removes all
+learning decisions and the alias provenance columns permanently.
+
+Indexing embeds and immediately upserts each batch. Completed batches survive a
+later provider failure. Each payload stores `document_hash`, the SHA-256 of the
+search text; unchanged jobs are skipped on the next run, while changed canonical
+skills cause only affected documents to be embedded again. Old points without a
+hash are indexed once; deleted PostgreSQL jobs still have their points removed.
+Progress prints `indexed X/Y` for changed jobs and final `indexed`, `skipped`,
+`deleted` counts. Use `python scripts/index_jobs.py --full` to force re-embedding all
+jobs, including after changing the embedding model without changing dimensions.
+Dimension changes still require rebuilding the Qdrant collection.
+
+| Environment variable | Default | Range / behavior |
+|---|---:|---|
+| `EMBEDDING_BATCH_SIZE` | 20 | 1–100 jobs per embed/upsert batch |
+| `EMBEDDING_REQUESTS_PER_MINUTE` | 0 | 0–1000; zero disables spacing, otherwise wait between calls |
+| `EMBEDDING_MAX_RETRIES` | 5 | 0–10 retries for 429/5xx only |
+| `EMBEDDING_RETRY_BASE_SECONDS` | 20 | 1–300; exponential backoff capped at 120 seconds |
+
+A numeric provider `retry-after` header overrides exponential backoff. Invalid keys
+and other 4xx errors are not retried. When retries run out, the error states how
+many jobs were saved; rerun the command to resume. For a restrictive Google quota,
+start with batch size **10** and **1** request/minute and adjust to the actual token
+and daily limits. RPM spacing does not guarantee staying within token/day quotas.
+Read `docs/MILESTONE13_REPORT.md` for checks, Docker verification and limitations.

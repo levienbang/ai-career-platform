@@ -54,11 +54,17 @@ def build_content_hash(job: JobExtraction) -> str:
 
 class JobIngestionPipeline:
     def __init__(
-        self, session: Session, extractor: StructuredJobExtractor, settings: Settings | None = None
+        self,
+        session: Session,
+        extractor: StructuredJobExtractor,
+        settings: Settings | None = None,
+        *,
+        alias_learner=None,
     ) -> None:
         self.session = session
         self.extractor = extractor
         self.settings = settings or get_settings()
+        self.alias_learner = alias_learner
 
     def import_records(self, records: list[dict[str, object]]) -> ImportResult:
         result = ImportResult(processed=len(records), inserted=0, skipped_duplicates=0, failed=0)
@@ -70,6 +76,7 @@ class JobIngestionPipeline:
         pending: list[tuple[int, RawJobRecord]] = []
         deterministic = 0
         llm_calls = 0
+        alias_llm_calls = 0
         skipped_before_llm = 0
 
         with self.session.begin():
@@ -140,6 +147,37 @@ class JobIngestionPipeline:
                                 ImportErrorDetail(
                                     record=index, error=self._safe_error_message(error)
                                 )
+                            )
+
+            if self.settings.skill_alias_learning:
+                from app.services.skill_learning import SkillAliasLearner
+
+                normalizer = SkillNormalizer(self.session)
+                names = []
+                for index, source, _raw_hash in prepared:
+                    if index in extracted_records:
+                        extracted = extracted_records[index]
+                        if job_repository.get_by_content_hash(build_content_hash(extracted)):
+                            continue
+                        names.extend(
+                            normalizer.unknown_names(
+                                [*extracted.required_skills, *extracted.preferred_skills],
+                                f"{source.title or ''} {source.description} "
+                                f"{getattr(source, 'technical_skills', None) or ''}",
+                            )
+                        )
+                if names:
+                    learner = self.alias_learner or SkillAliasLearner(self.session, self.settings)
+                    calls_before = learner.llm_calls
+                    proposals = learner.propose(names)
+                    alias_llm_calls = learner.llm_calls - calls_before
+                    for proposal in proposals:
+                        try:
+                            with self.session.begin_nested():
+                                learner.apply_one(proposal)
+                        except (IntegrityError, ValueError):
+                            logger.warning(
+                                "SkillAliasLearner persistence conflict; using extracted skills"
                             )
 
             seen_urls.clear()
@@ -221,13 +259,14 @@ class JobIngestionPipeline:
         result.errors.sort(key=lambda item: item.record)
         logger.info(
             "processed=%d skipped_before_llm=%d deterministic=%d "
-            "llm_records=%d llm_calls=%d failed=%d",
+            "llm_records=%d llm_calls=%d failed=%d alias_llm_calls=%d",
             result.processed,
             skipped_before_llm,
             deterministic,
             len(pending),
             llm_calls,
             result.failed,
+            alias_llm_calls,
         )
         return result
 

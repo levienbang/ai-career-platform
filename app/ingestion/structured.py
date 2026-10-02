@@ -15,7 +15,9 @@ def parse_skill_list(value: object) -> list[str]:
                 parsed = ast.literal_eval(value.strip())
             except (ValueError, SyntaxError, TypeError, RecursionError):
                 pass
-        value = parsed if isinstance(parsed, (list, tuple)) else re.split(r"[,;\n](?![^()]*\))", value)
+        value = (
+            parsed if isinstance(parsed, (list, tuple)) else re.split(r"[,;\n](?![^()]*\))", value)
+        )
     if not isinstance(value, (list, tuple)):
         return []
     skills: list[str] = []

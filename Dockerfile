@@ -6,14 +6,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY pyproject.toml ./
+ARG INSTALL_TARGET=.
+# Build metadata alone is enough to resolve dependencies; source changes preserve this layer.
+RUN pip install --no-cache-dir "${INSTALL_TARGET}"
+
 COPY app ./app
 COPY migrations ./migrations
 COPY scripts ./scripts
 COPY data ./data
 COPY evaluation ./evaluation
 COPY alembic.ini ./
-ARG INSTALL_TARGET=.
-RUN pip install --no-cache-dir "${INSTALL_TARGET}"
+RUN pip install --no-cache-dir --no-deps "${INSTALL_TARGET}"
 
 EXPOSE 8000
 

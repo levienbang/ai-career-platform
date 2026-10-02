@@ -1,0 +1,14 @@
+[
+  ["Java", "JavaScript"],
+  ["React", "React Native"],
+  ["SQL", "SQL Server"],
+  ["SQL", "MySQL"],
+  ["SQL", "PostgreSQL"],
+  ["C", "C++"],
+  ["C", "C#"],
+  ["C++", "C#"],
+  ["AWS", "AWS Glue"],
+  ["AWS", "Amazon S3"],
+  ["Excel", "Power BI"],
+  ["Machine Learning", "Deep Learning"]
+]

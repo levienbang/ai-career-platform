@@ -1,11 +1,16 @@
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
+from hashlib import sha256
 
 from qdrant_client import QdrantClient, models
 from sqlalchemy.orm import Session
 
+from app.config import Settings, get_settings
 from app.db.repositories import JobRepository
+from app.ingestion.extractor import RequestThrottle
 from app.retrieval.documents import SearchDocument, build_search_document
-from app.retrieval.embeddings import EmbeddingProvider
+from app.retrieval.embeddings import EmbeddingProvider, EmbeddingServiceError
 
 
 class VectorStoreUnavailableError(RuntimeError):
@@ -28,6 +33,37 @@ class IndexedJobNotFoundError(LookupError):
 class IndexResult:
     indexed: int
     deleted: int
+    skipped: int = 0
+
+
+def document_hash(document: SearchDocument) -> str:
+    return sha256(document.text.encode("utf-8")).hexdigest()
+
+
+def embedding_retry_details(error: Exception) -> tuple[bool, float | None]:
+    """Inspect wrapped provider errors without logging payloads or credentials."""
+    current: BaseException | None = error
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        response = getattr(current, "response", None)
+        code = getattr(current, "status_code", None) or getattr(response, "status_code", None)
+        code = code or getattr(current, "code", None)
+        if callable(code):
+            code = code()
+        try:
+            status = int(code)
+        except (TypeError, ValueError):
+            status = 429 if "RESOURCE_EXHAUSTED" in str(current) else 0
+        if status == 429 or 500 <= status <= 599:
+            headers = getattr(response, "headers", None) or getattr(current, "headers", {})
+            try:
+                delay = max(0.0, float(headers.get("retry-after")))
+            except (TypeError, ValueError):
+                delay = None
+            return True, delay
+        current = current.__cause__ or current.__context__
+    return False, None
 
 
 def build_qdrant_client(url: str, timeout: float) -> QdrantClient:
@@ -40,10 +76,21 @@ class QdrantJobIndex:
         client: QdrantClient,
         embedder: EmbeddingProvider,
         collection_name: str,
+        *,
+        settings: Settings | None = None,
+        clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], None] = time.sleep,
+        progress: Callable[[int, int], None] | None = None,
     ) -> None:
         self.client = client
         self.embedder = embedder
         self.collection_name = collection_name
+        self.settings = settings or get_settings()
+        self.sleep = sleep
+        self.progress = progress
+        self.throttle = RequestThrottle(
+            self.settings.embedding_requests_per_minute, clock=clock, sleep=sleep
+        )
 
     def _collection_exists(self) -> bool:
         try:
@@ -91,16 +138,29 @@ class QdrantJobIndex:
     def _upsert_documents(self, documents: list[SearchDocument]) -> int:
         if not documents:
             return 0
-        vectors = self.embedder.embed_documents(
-            [document.text for document in documents],
-            [document.title for document in documents],
-        )
+        for attempt in range(self.settings.embedding_max_retries + 1):
+            self.throttle.wait()
+            try:
+                vectors = self.embedder.embed_documents(
+                    [document.text for document in documents],
+                    [document.title for document in documents],
+                )
+                break
+            except Exception as error:
+                retryable, retry_after = embedding_retry_details(error)
+                if not retryable or attempt == self.settings.embedding_max_retries:
+                    raise EmbeddingServiceError("Document embedding request failed") from error
+                self.sleep(
+                    retry_after
+                    if retry_after is not None
+                    else min(120, self.settings.embedding_retry_base_seconds * 2**attempt)
+                )
         self._validate_vectors(documents, vectors, self.embedder.dimensions)
         points = [
             models.PointStruct(
                 id=document.job_id,
                 vector=vector,
-                payload=document.payload,
+                payload={**document.payload, "document_hash": document_hash(document)},
             )
             for document, vector in zip(documents, vectors, strict=True)
         ]
@@ -114,8 +174,8 @@ class QdrantJobIndex:
             raise VectorStoreUnavailableError("Could not upsert jobs into Qdrant") from error
         return len(points)
 
-    def _indexed_point_ids(self) -> set[int]:
-        point_ids: set[int] = set()
+    def _indexed_documents(self) -> dict[int, str | None]:
+        hashes: dict[int, str | None] = {}
         offset = None
         try:
             while True:
@@ -123,24 +183,43 @@ class QdrantJobIndex:
                     collection_name=self.collection_name,
                     limit=256,
                     offset=offset,
-                    with_payload=False,
+                    with_payload=["document_hash"],
                     with_vectors=False,
                 )
-                point_ids.update(int(point.id) for point in points)
+                hashes.update(
+                    (int(point.id), (point.payload or {}).get("document_hash")) for point in points
+                )
                 if offset is None:
                     break
         except Exception as error:
             raise VectorStoreUnavailableError("Could not inspect indexed jobs") from error
-        return point_ids
+        return hashes
 
-    def index_all(self, session: Session) -> IndexResult:
+    def index_all(self, session: Session, *, full: bool = False) -> IndexResult:
         self.ensure_collection()
         jobs = JobRepository(session).list_all()
         documents = [build_search_document(job) for job in jobs]
-        indexed = self._upsert_documents(documents)
+        previous = self._indexed_documents()
+        changed = [
+            document
+            for document in documents
+            if full or previous.get(document.job_id) != document_hash(document)
+        ]
+        indexed = 0
+        for start in range(0, len(changed), self.settings.embedding_batch_size):
+            batch = changed[start : start + self.settings.embedding_batch_size]
+            try:
+                indexed += self._upsert_documents(batch)
+            except EmbeddingServiceError as error:
+                raise EmbeddingServiceError(
+                    f"Embedding failed after indexing {indexed}/{len(changed)} jobs; "
+                    "completed batches are saved. Run indexing again to resume."
+                ) from error
+            if self.progress:
+                self.progress(indexed, len(changed))
 
         database_ids = {document.job_id for document in documents}
-        stale_ids = sorted(self._indexed_point_ids() - database_ids)
+        stale_ids = sorted(previous.keys() - database_ids)
         if stale_ids:
             try:
                 self.client.delete(
@@ -152,7 +231,9 @@ class QdrantJobIndex:
                 raise VectorStoreUnavailableError(
                     "Could not remove stale jobs from Qdrant"
                 ) from error
-        return IndexResult(indexed=indexed, deleted=len(stale_ids))
+        return IndexResult(
+            indexed=indexed, deleted=len(stale_ids), skipped=len(documents) - len(changed)
+        )
 
     def index_job(self, session: Session, job_id: int) -> IndexResult:
         job = JobRepository(session).get(job_id)

@@ -1,6 +1,3 @@
-import json
-from pathlib import Path
-
 from sqlalchemy import func, select
 from sqlalchemy.orm import sessionmaker
 
@@ -15,9 +12,7 @@ def test_seed_loads_data_file_and_is_idempotent(db_session, monkeypatch) -> None
     seed_script.seed()
     seed_script.seed()
 
-    seed_data = json.loads(
-        (Path(__file__).parents[1] / "data" / "seed_data.json").read_text(encoding="utf-8")
-    )
+    seed_data = seed_script.load_seed_data()
     assert db_session.scalar(select(func.count()).select_from(Job)) == len(seed_data["jobs"])
     assert db_session.scalar(select(func.count()).select_from(Company)) == len(seed_data["jobs"])
     assert db_session.scalar(select(func.count()).select_from(Skill)) == len(seed_data["taxonomy"])

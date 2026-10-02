@@ -95,7 +95,7 @@ def recognize_cv_skills(
         if skill is None or skill.id not in market_skill_ids:
             if claim.name.casefold() in evidence.casefold():
                 unknown.add(claim.name)
-        elif normalizer.evidence_mentions(skill, evidence):
+        elif normalizer.evidence_mentions(skill, evidence, name=claim.name):
             recognized.setdefault(
                 skill.id, RecognizedSkill(skill=skill.canonical_name, evidence=evidence)
             )

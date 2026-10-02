@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -13,6 +14,8 @@ from app.config import Settings, get_settings
 from app.db.session import get_db
 from app.retrieval.qdrant import build_qdrant_client
 from app.schemas.system import ReadinessResponse
+
+logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s %(message)s")
 
 app = FastAPI(title="AI Career Intelligence Platform", version="0.1.0")
 app.include_router(jobs_router)

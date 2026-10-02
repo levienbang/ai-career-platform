@@ -1,0 +1,310 @@
+{
+  "Scikit-learn": {
+    "category": "library",
+    "aliases": [
+      "sklearn",
+      "scikit learn"
+    ]
+  },
+  "TensorFlow": {
+    "category": "library",
+    "aliases": [
+      "tf",
+      "tensorflow 2"
+    ]
+  },
+  "PyTorch": {
+    "category": "library",
+    "aliases": [
+      "torch"
+    ]
+  },
+  "Keras": {
+    "category": "library",
+    "aliases": []
+  },
+  "Kubernetes": {
+    "category": "platform",
+    "aliases": [
+      "k8s"
+    ]
+  },
+  "PostgreSQL": {
+    "category": "database",
+    "aliases": [
+      "postgres",
+      "postgre sql"
+    ]
+  },
+  "JavaScript": {
+    "category": "programming",
+    "aliases": [
+      "js"
+    ]
+  },
+  "TypeScript": {
+    "category": "programming",
+    "aliases": [
+      "ts"
+    ]
+  },
+  "Node.js": {
+    "category": "runtime",
+    "aliases": [
+      "nodejs",
+      "node js"
+    ]
+  },
+  "React": {
+    "category": "framework",
+    "aliases": [
+      "reactjs",
+      "react.js"
+    ]
+  },
+  "Next.js": {
+    "category": "framework",
+    "aliases": [
+      "nextjs"
+    ]
+  },
+  "Vue.js": {
+    "category": "framework",
+    "aliases": [
+      "vuejs",
+      "vue"
+    ]
+  },
+  "Microsoft SQL Server": {
+    "category": "database",
+    "aliases": [
+      "sql server",
+      "mssql",
+      "ms sql"
+    ]
+  },
+  "Power BI": {
+    "category": "analytics",
+    "aliases": [
+      "powerbi"
+    ]
+  },
+  "Adobe Photoshop": {
+    "category": "design",
+    "aliases": [
+      "photoshop"
+    ]
+  },
+  "Adobe Illustrator": {
+    "category": "design",
+    "aliases": [
+      "illustrator"
+    ]
+  },
+  "Go": {
+    "category": "programming",
+    "aliases": [
+      "golang"
+    ]
+  },
+  "Amazon Web Services": {
+    "category": "platform",
+    "aliases": [
+      "aws"
+    ]
+  },
+  "Google Cloud Platform": {
+    "category": "platform",
+    "aliases": [
+      "gcp"
+    ]
+  },
+  "Microsoft Azure": {
+    "category": "platform",
+    "aliases": [
+      "azure"
+    ]
+  },
+  "CI/CD": {
+    "category": "platform",
+    "aliases": [
+      "continuous integration and continuous delivery"
+    ]
+  },
+  "Machine Learning": {
+    "category": "domain",
+    "aliases": [
+      "ml"
+    ]
+  },
+  "Deep Learning": {
+    "category": "domain",
+    "aliases": [
+      "dl"
+    ]
+  },
+  "Natural Language Processing": {
+    "category": "domain",
+    "aliases": [
+      "nlp"
+    ]
+  },
+  "Large Language Models": {
+    "category": "domain",
+    "aliases": [
+      "llm",
+      "llms",
+      "large language model"
+    ]
+  },
+  "Computer Vision": {
+    "category": "domain",
+    "aliases": [
+      "cv"
+    ]
+  },
+  "Hugging Face": {
+    "category": "library",
+    "aliases": [
+      "huggingface"
+    ]
+  },
+  "Apache Spark": {
+    "category": "platform",
+    "aliases": [
+      "spark",
+      "pyspark"
+    ]
+  },
+  "Apache Airflow": {
+    "category": "platform",
+    "aliases": [
+      "airflow"
+    ]
+  },
+  "Apache Kafka": {
+    "category": "platform",
+    "aliases": [
+      "kafka"
+    ]
+  },
+  "Elasticsearch": {
+    "category": "database",
+    "aliases": [
+      "elastic search"
+    ]
+  },
+  "MongoDB": {
+    "category": "database",
+    "aliases": [
+      "mongo"
+    ]
+  },
+  "Git": {
+    "category": "tool",
+    "aliases": []
+  },
+  "GitHub": {
+    "category": "platform",
+    "aliases": []
+  },
+  "Docker": {
+    "category": "platform",
+    "aliases": []
+  },
+  "Linux": {
+    "category": "platform",
+    "aliases": []
+  },
+  "Pandas": {
+    "category": "library",
+    "aliases": []
+  },
+  "NumPy": {
+    "category": "library",
+    "aliases": []
+  },
+  "XGBoost": {
+    "category": "library",
+    "aliases": []
+  },
+  "LightGBM": {
+    "category": "library",
+    "aliases": []
+  },
+  "Python": {
+    "category": "programming",
+    "aliases": []
+  },
+  "FastAPI": {
+    "category": "framework",
+    "aliases": [
+      "fast api"
+    ]
+  },
+  "LangChain": {
+    "category": "framework",
+    "aliases": [
+      "lang chain"
+    ]
+  },
+  "PL/SQL": {
+    "category": "programming",
+    "aliases": [
+      "plsql"
+    ]
+  },
+  "Data Stage": {
+    "category": "analytics",
+    "aliases": [
+      "datastage",
+      "IBM DataStage"
+    ]
+  },
+  "Metabase": {
+    "category": "analytics",
+    "aliases": []
+  },
+  "Google Data Studio": {
+    "category": "analytics",
+    "aliases": [
+      "Looker Studio"
+    ]
+  },
+  "MySQL": {
+    "category": "database",
+    "aliases": []
+  },
+  "C": {
+    "category": "programming",
+    "aliases": []
+  },
+  "C++": {
+    "category": "programming",
+    "aliases": []
+  },
+  "C#": {
+    "category": "programming",
+    "aliases": []
+  },
+  "R": {
+    "category": "programming",
+    "aliases": []
+  },
+  ".NET": {
+    "category": "framework",
+    "aliases": [
+      "dotnet"
+    ]
+  },
+  "OpenCV": {
+    "category": "library",
+    "aliases": [
+      "open cv"
+    ]
+  },
+  "SQL": {
+    "category": "programming",
+    "aliases": []
+  }
+}

@@ -1,4 +1,6 @@
 import json
+import logging
+import re
 import time
 from collections import Counter
 from collections.abc import Callable
@@ -7,6 +9,7 @@ from threading import Lock
 from typing import Protocol
 
 from langchain_core.prompts import ChatPromptTemplate
+from pydantic import ValidationError
 
 from app.config import Settings
 from app.llm import (
@@ -15,6 +18,56 @@ from app.llm import (
     structured_output_guidance,
 )
 from app.schemas.ingestion import JobBatchExtraction, JobExtraction, RawJobRecord
+
+LOGGER = logging.getLogger(__name__)
+
+
+def _log_failure(
+    error: Exception, records: list[RawJobRecord], attempt: int, *, response_error: bool = False
+) -> None:
+    # Parser errors can include the complete model output, including private source fields.
+    if (
+        response_error
+        or isinstance(error, (ValidationError, json.JSONDecodeError))
+        or type(error).__name__
+        in {
+            "OutputParserException",
+            "StructuredOutputValidationError",
+        }
+    ):
+        message = "Structured response could not be validated or parsed"
+    else:
+        message = str(error)
+        # Providers may echo request/response bodies. Retain only the diagnostic prefix.
+        message = re.split(
+            r"(?:request|response)\s*(?:body|payload)|"
+            r"(?:prompt|model output|llm output)\s*[:=]|<job_record|\{",
+            message,
+            maxsplit=1,
+            flags=re.IGNORECASE,
+        )[0]
+        body = getattr(error, "body", None)
+        if isinstance(body, dict):
+            diagnostic = body.get("error", body)
+            if isinstance(diagnostic, dict) and isinstance(diagnostic.get("message"), str):
+                message += " " + diagnostic["message"]
+        message = message.replace(SYSTEM_PROMPT, "[redacted]")
+        for record in records:
+            for value in record.model_dump().values():
+                values = value if isinstance(value, list) else [value]
+                for text in values:
+                    if isinstance(text, str) and text:
+                        for wording in (text, json.dumps(text)[1:-1], " ".join(text.split())):
+                            message = message.replace(wording, "[redacted]")
+    message = re.sub(r"sk-[\w-]+", "***", message)
+    message = " ".join(message.split())[:300]
+    LOGGER.warning(
+        "LangChainJobExtractor records=%d attempt=%d exception=%s message=%s",
+        len(records),
+        attempt,
+        type(error).__name__,
+        message,
+    )
 
 
 class ExtractorConfigurationError(RuntimeError):
@@ -125,6 +178,7 @@ class LangChainJobExtractor:
                 max_retries=0,
             )
         except ChatModelConfigurationError as error:
+            _log_failure(error, [], 1)
             raise ExtractorConfigurationError(str(error)) from error
         self._model = selected.runnable
         system_prompt = SYSTEM_PROMPT
@@ -164,20 +218,31 @@ class LangChainJobExtractor:
     def extract(self, record: RawJobRecord) -> JobExtraction:
         messages = self._prompt.invoke({"record_json": _record_payload(record)})
         last_error: Exception | None = None
-        for _ in range(self._max_retries + 1):
+        for attempt in range(1, self._max_retries + 2):
+            invoking = True
             try:
                 result = self._invoke(self._model, messages)
+                invoking = False
                 extracted = JobExtraction.model_validate(result)
                 return _guard(extracted, record)
             except Exception as error:
+                _log_failure(error, [record], attempt, response_error=not invoking)
                 last_error = error
 
+        LOGGER.warning("LangChainJobExtractor 1 records failed after retries/split")
         attempts = self._max_retries + 1
         raise ExtractionError(
             f"Structured extraction failed after {attempts} attempt(s)"
         ) from last_error
 
     def extract_many(self, records: list[RawJobRecord]) -> list[JobExtraction | None]:
+        results = self._extract_many(records)
+        failed = sum(result is None for result in results)
+        if failed:
+            LOGGER.warning("LangChainJobExtractor %d records failed after retries/split", failed)
+        return results
+
+    def _extract_many(self, records: list[RawJobRecord]) -> list[JobExtraction | None]:
         if not records:
             return []
         if self._batch_model is None:
@@ -197,15 +262,19 @@ class LangChainJobExtractor:
                 )
             }
         )
-        for _ in range(self._max_retries + 1):
+        for attempt in range(1, self._max_retries + 2):
+            invoking = True
             try:
                 response = self._invoke(self._batch_model, messages)
+                invoking = False
                 if isinstance(response, dict) and "raw" in response:
                     if response.get("parsed") is not None:
                         response = response["parsed"]
                     else:
                         # Keep good indices even when the provider's Pydantic parser
                         # rejected a missing/invalid index elsewhere in valid JSON.
+                        if error := response.get("parsing_error"):
+                            _log_failure(error, records, attempt, response_error=not invoking)
                         raw = response["raw"]
                         if raw.tool_calls:
                             response = raw.tool_calls[0]["args"]
@@ -243,13 +312,14 @@ class LangChainJobExtractor:
                     )
                     results[index] = _guard(extracted, records[index])
                 return results
-            except Exception:
+            except Exception as error:
+                _log_failure(error, records, attempt, response_error=not invoking)
                 # A whole-call/JSON failure retries the group, then reduces its size.
                 continue
         if len(records) == 1:
             return [None]
         middle = len(records) // 2
-        return self.extract_many(records[:middle]) + self.extract_many(records[middle:])
+        return self._extract_many(records[:middle]) + self._extract_many(records[middle:])
 
 
 def build_job_extractor(settings: Settings) -> StructuredJobExtractor:

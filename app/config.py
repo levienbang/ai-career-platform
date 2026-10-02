@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, SecretStr, field_validator
@@ -7,6 +8,20 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_env: str = "development"
+    skill_data_dir: Path = Path("data")
+    skill_alias_learning: bool = True
+    skill_alias_auto_confidence: float = Field(default=0.9, ge=0.5, le=1.0)
+    skill_alias_batch_size: int = Field(default=40, ge=1, le=100)
+    embedding_batch_size: int = Field(default=20, ge=1, le=100)
+    embedding_requests_per_minute: int = Field(default=0, ge=0, le=1000)
+    embedding_max_retries: int = Field(default=5, ge=0, le=10)
+    embedding_retry_base_seconds: float = Field(default=20, ge=1, le=300)
+
+    @field_validator("skill_data_dir", mode="before")
+    @classmethod
+    def default_skill_data_dir(cls, value):
+        return value or Path("data")
+
     database_url: str = "postgresql+psycopg://career:career@localhost:5432/career"
     readonly_database_url: str | None = None
     deepseek_api_key: SecretStr | None = None
