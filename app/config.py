@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     skill_data_dir: Path = Path("data")
     skill_alias_learning: bool = True
     skill_alias_auto_confidence: float = Field(default=0.9, ge=0.5, le=1.0)
+    # Keeping a name as its own skill is low risk, so it needs less certainty than a merge.
+    skill_alias_new_confidence: float = Field(default=0.7, ge=0.5, le=1.0)
     skill_alias_batch_size: int = Field(default=40, ge=1, le=100)
     embedding_batch_size: int = Field(default=20, ge=1, le=100)
     embedding_requests_per_minute: int = Field(default=0, ge=0, le=1000)

@@ -14,3 +14,6 @@ build/
 
 # Local editor/R session files
 .Rhistory
+
+# Saved Streamlit demo conversations
+demo/.chats/

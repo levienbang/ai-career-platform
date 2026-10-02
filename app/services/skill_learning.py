@@ -2,13 +2,13 @@
 
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import Settings
@@ -96,6 +96,7 @@ class SkillAliasLearner:
         unique = {skill_match_key(name): name for name in reversed(names)}
         names = [name for key, name in unique.items() if key not in decided]
         skills = list(self.session.scalars(select(Skill).order_by(Skill.id)))
+        skills_by_id = {skill.id: skill for skill in skills}
         proposals = []
         for start in range(0, len(names), self.settings.skill_alias_batch_size):
             batch = names[start : start + self.settings.skill_alias_batch_size]
@@ -175,16 +176,25 @@ class SkillAliasLearner:
                 key = skill_match_key(name)
                 item = by_key[key]
                 target = candidate_ids[key].get(item.skill_id)
+                chosen = skills_by_id.get(item.skill_id) if item.skill_id is not None else None
+                # "Same as <itself>" (same match key) means the name is already a valid skill.
+                keeps_itself = (
+                    item.decision == "same_as"
+                    and chosen is not None
+                    and skill_match_key(chosen.canonical_name) == key
+                )
                 decision = "pending"
-                if item.confidence >= self.settings.skill_alias_auto_confidence:
-                    if item.decision == "new" and item.skill_id is None:
+                if (item.decision == "new" and item.skill_id is None) or keeps_itself:
+                    if item.confidence >= self.settings.skill_alias_new_confidence:
                         decision = "new"
-                    elif (
-                        item.decision == "same_as"
-                        and target is not None
-                        and not self._blocked_target(name, target)
-                    ):
-                        decision = "alias"
+                        target = None
+                elif (
+                    item.decision == "same_as"
+                    and item.confidence >= self.settings.skill_alias_auto_confidence
+                    and target is not None
+                    and not self._blocked_target(name, target)
+                ):
+                    decision = "alias"
                 proposals.append(
                     LearningProposal(
                         name,
@@ -206,9 +216,75 @@ class SkillAliasLearner:
         return any(blocked_skill_pair(name, spelling, self.blocklist) for spelling in names)
 
     def apply(self, proposals: list[LearningProposal]) -> None:
-        for proposal in proposals:
+        for proposal in self._consolidate(proposals):
             self.apply_one(proposal)
         self.session.flush()
+
+    def _consolidate(self, proposals: list[LearningProposal]) -> list[LearningProposal]:
+        """Point every alias in a connected group at one canonical skill.
+
+        Per-name decisions can disagree on direction (Excel -> MS Excel and
+        MS Excel -> Excel). Applying both would merge a skill into one that was
+        just removed, so each group keeps a single canonical: curated first, then a
+        canonical spelling from the alias file, then the most used, then lowest id.
+        """
+        normalizer = SkillNormalizer(self.session)
+        parent: dict[int, int] = {}
+
+        def find(skill_id: int) -> int:
+            parent.setdefault(skill_id, skill_id)
+            while parent[skill_id] != skill_id:
+                parent[skill_id] = parent[parent[skill_id]]
+                skill_id = parent[skill_id]
+            return skill_id
+
+        own: dict[str, int | None] = {}
+        for proposal in proposals:
+            if proposal.decision != "alias" or proposal.skill_id is None:
+                continue
+            existing = normalizer.resolve(proposal.name)
+            own[proposal.name] = existing.id if existing is not None else None
+            if existing is not None:
+                parent[find(existing.id)] = find(proposal.skill_id)
+            else:
+                find(proposal.skill_id)
+        if not own:
+            return proposals
+
+        canonical_keys = {skill_match_key(canonical) for canonical in self.definitions}
+        usage = dict(
+            self.session.execute(
+                select(JobSkill.skill_id, func.count())
+                .where(JobSkill.skill_id.in_(list(parent)))
+                .group_by(JobSkill.skill_id)
+            ).all()
+        )
+        groups: dict[int, list[int]] = {}
+        for skill_id in parent:
+            groups.setdefault(find(skill_id), []).append(skill_id)
+
+        def rank(skill_id: int) -> tuple:
+            skill = self.session.get(Skill, skill_id)
+            return (
+                skill is None or skill.origin != "curated",
+                skill is None or skill_match_key(skill.canonical_name) not in canonical_keys,
+                -usage.get(skill_id, 0),
+                skill_id,
+            )
+
+        chosen = {root: min(members, key=rank) for root, members in groups.items()}
+        result = []
+        for proposal in proposals:
+            if proposal.name not in own:
+                result.append(proposal)
+                continue
+            canonical = chosen[find(proposal.skill_id)]
+            if own[proposal.name] == canonical:
+                # This name is the group's canonical: keep it instead of merging it away.
+                result.append(replace(proposal, decision="new", skill_id=None))
+            else:
+                result.append(replace(proposal, skill_id=canonical))
+        return result
 
     def apply_one(self, proposal: LearningProposal, *, replace_pending: bool = False) -> Skill:
         key = skill_match_key(proposal.name)

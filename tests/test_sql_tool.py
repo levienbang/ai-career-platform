@@ -147,3 +147,20 @@ def test_sql_langchain_wrapper_invokes_same_tool() -> None:
     result = tool.invoke({"question": "count jobs"})
 
     assert result.row_count == 1
+
+
+def test_sql_validator_allows_and_or_conditions() -> None:
+    sql = (
+        "SELECT count(j.id) FROM jobs AS j "
+        "WHERE (j.location ILIKE '%hồ chí minh%' AND j.title ILIKE '%software%') "
+        "OR j.title ILIKE '%developer%'"
+    )
+    validated = SQLSafetyValidator().validate(sql)
+    assert " AND " in validated and " OR " in validated
+
+
+def test_sql_validator_still_rejects_unsafe_function_inside_and() -> None:
+    with pytest.raises(SQLValidationError, match="is not allowed"):
+        SQLSafetyValidator().validate(
+            "SELECT j.id FROM jobs AS j WHERE j.id > 0 AND pg_sleep(1) IS NULL"
+        )

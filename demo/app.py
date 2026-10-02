@@ -1,18 +1,27 @@
 """Chat demo for the AI Career Platform: ask questions or drop a CV (PDF) into the chat.
 
-Text messages go to POST /agent/query. A PDF attached to a message goes to
+Text messages go to POST /agent/query, prefixed with the last five turns
+(see context.py) so follow-up questions keep their context. A PDF attached to a message goes to
 POST /cv/match; the result offers a skill-gap analysis via POST /cv/upload.
 The CV is only sent to the configured local API and kept in this browser session.
+Conversations (messages and API results, never the PDF bytes) are saved as JSON
+files in demo/.chats so they survive a page reload.
 """
 
+import json
 import os
+import uuid
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import httpx
 import streamlit as st
+from context import build_query
 
 DEFAULT_API = os.getenv("CAREER_API_URL", "http://localhost:8000")
 TIMEOUT = httpx.Timeout(180.0, connect=5.0)
+CHAT_DIR = Path(os.getenv("CAREER_CHAT_DIR", Path(__file__).parent / ".chats"))
 
 st.set_page_config(page_title="Career Chat", page_icon="💼", layout="wide")
 
@@ -42,9 +51,10 @@ def call_api(method: str, path: str, **kwargs: Any) -> tuple[dict | None, str | 
     return response.json(), None
 
 
-def ask_agent(question: str) -> dict:
-    data, error = call_api("POST", "/agent/query", json={"question": question})
-    return {"kind": "agent", "data": data, "error": error}
+def ask_agent(question: str, history: list[dict]) -> dict:
+    query = build_query(question, history)
+    data, error = call_api("POST", "/agent/query", json={"question": query})
+    return {"kind": "agent", "data": data, "error": error, "query": query}
 
 
 def match_cv(name: str, content: bytes, limit: int) -> dict:
@@ -160,6 +170,10 @@ def render_cv_gap(message: dict) -> None:
 def render(message: dict) -> None:
     if message.get("error"):
         st.error(message["error"])
+    if message.get("query") and "\n" in message["query"]:
+        with st.expander("Query đã gửi (kèm ngữ cảnh)"):
+            st.text(message["query"])
+    if message.get("error"):
         return
     if message["kind"] == "text":
         st.markdown(message["content"])
@@ -171,27 +185,105 @@ def render(message: dict) -> None:
         render_cv_gap(message)
 
 
+# --------------------------------------------------------------------- storage
+
+
+def _chat_path(chat_id: str) -> Path:
+    return CHAT_DIR / f"{chat_id}.json"
+
+
+def list_chats() -> list[dict]:
+    """Saved conversations, most recently updated first."""
+    chats = []
+    for path in CHAT_DIR.glob("*.json"):
+        try:
+            chats.append(json.loads(path.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            continue
+    return sorted(chats, key=lambda chat: chat["updated_at"], reverse=True)
+
+
+def save_current_chat() -> None:
+    messages = st.session_state.messages
+    if not messages:
+        return
+    first = next((m["content"] for m in messages if m["role"] == "user"), "Cuộc trò chuyện")
+    title = " ".join(first.replace("📎", "").split())[:40] or "Cuộc trò chuyện"
+    now = datetime.now(UTC).isoformat()
+    path = _chat_path(st.session_state.chat_id)
+    created = now
+    if path.exists():
+        created = json.loads(path.read_text(encoding="utf-8")).get("created_at", now)
+    CHAT_DIR.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "id": st.session_state.chat_id,
+                "title": title,
+                "created_at": created,
+                "updated_at": now,
+                "messages": messages,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+
+def open_chat(chat_id: str | None) -> None:
+    """Switch to a saved chat, or start a new empty one when chat_id is None."""
+    st.session_state.chat_id = chat_id or uuid.uuid4().hex
+    st.session_state.messages = []
+    st.session_state.pop("cv", None)  # PDF bytes never outlive the chat they came from
+    if chat_id and _chat_path(chat_id).exists():
+        saved = json.loads(_chat_path(chat_id).read_text(encoding="utf-8"))
+        st.session_state.messages = saved.get("messages", [])
+
+
 # ------------------------------------------------------------------------- page
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+if "chat_id" not in st.session_state:
+    open_chat(None)
 if "api_url" not in st.session_state:
     st.session_state.api_url = DEFAULT_API
 
 with st.sidebar:
-    st.header("Cài đặt")
-    st.session_state.api_url = st.text_input("API URL", st.session_state.api_url)
-    limit = st.slider("Số job gợi ý từ CV", 1, 20, 10)
-    gap_top = st.slider("Phân tích skill gap trên top N job", 1, 20, 5)
+    if st.button("＋ Cuộc trò chuyện mới", use_container_width=True, type="primary"):
+        open_chat(None)
+        st.rerun()
+
+    st.subheader("Lịch sử")
+    chats = list_chats()
+    if not chats:
+        st.caption("Chưa có cuộc trò chuyện nào.")
+    for chat in chats:
+        current = chat["id"] == st.session_state.chat_id
+        if st.button(
+            ("▶ " if current else "") + chat["title"],
+            key=f"chat-{chat['id']}",
+            use_container_width=True,
+            type="secondary",
+            disabled=current,
+        ):
+            open_chat(chat["id"])
+            st.rerun()
+    if st.session_state.messages and st.button(
+        "🗑 Xoá cuộc trò chuyện này", use_container_width=True
+    ):
+        _chat_path(st.session_state.chat_id).unlink(missing_ok=True)
+        open_chat(None)
+        st.rerun()
+
+    st.divider()
+    with st.expander("Cài đặt"):
+        st.session_state.api_url = st.text_input("API URL", st.session_state.api_url)
+        limit = st.slider("Số job gợi ý từ CV", 1, 20, 10)
+        gap_top = st.slider("Phân tích skill gap trên top N job", 1, 20, 5)
     _, ready_error = call_api("GET", "/ready")
     if ready_error:
         st.error(f"API chưa sẵn sàng: {ready_error}")
     else:
-        st.success("API sẵn sàng")
-    if st.button("Xoá hội thoại", use_container_width=True):
-        st.session_state.messages = []
-        st.session_state.pop("cv", None)
-        st.rerun()
+        st.caption("🟢 API sẵn sàng")
     st.caption(
         "Gõ câu hỏi (vd: *Có bao nhiêu job yêu cầu Python?*, *Tìm job AI ở Hà Nội*) "
         "hoặc kéo CV PDF vào khung chat."
@@ -212,6 +304,7 @@ if cv and cv.get("matched_ids"):
             reply["role"] = "assistant"
             render(reply)
         st.session_state.messages.append(reply)
+        save_current_chat()
 
 prompt = st.chat_input(
     "Hỏi về job, kỹ năng… hoặc kéo CV (PDF) vào đây",
@@ -243,8 +336,9 @@ if prompt:
                 }
         else:
             with st.spinner("Agent đang xử lý..."):
-                reply = ask_agent(text)
+                reply = ask_agent(text, st.session_state.messages[:-1])
         reply["role"] = "assistant"
         render(reply)
     st.session_state.messages.append(reply)
+    save_current_chat()
     st.rerun()

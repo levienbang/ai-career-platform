@@ -7,11 +7,16 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.config import Settings, get_settings
 from app.db.base import Base
 from app.db.models import Skill, SkillAlias
 from app.db.session import get_db
 from app.main import app
 from app.schemas.ingestion import JobExtraction, RawJobRecord
+
+# Tests must not read a developer's local .env (real keys, DB and collection names).
+Settings.model_config["env_file"] = None
+get_settings.cache_clear()
 
 
 class FakeEmbeddingProvider:

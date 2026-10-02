@@ -464,3 +464,60 @@ def test_seed_alias_provenance_and_learning_canonical_display(db_session):
         for alias in db_session.scalars(select(SkillAlias))
         if alias.alias in {"sklearn", "elastic search"}
     )
+
+
+def test_same_as_itself_is_kept_as_its_own_skill(db_session):
+    java = Skill(canonical_name="Java", origin="extracted")
+    db_session.add(java)
+    db_session.commit()
+    model = FakeModel(lambda name: {"decision": "same_as", "skill_id": java.id})
+    learner = SkillAliasLearner(db_session, Settings(_env_file=None), model=model)
+    (proposal,) = learner.propose(["Java"])
+    assert (proposal.decision, proposal.skill_id) == ("new", None)
+
+
+@pytest.mark.parametrize(("confidence", "expected"), [(0.75, "new"), (0.6, "pending")])
+def test_new_skill_uses_its_own_lower_threshold(db_session, confidence, expected):
+    class LowConfidence(FakeModel):
+        def invoke(self, messages):
+            output = super().invoke(messages)
+            for item in output["items"]:
+                item["confidence"] = confidence
+            return output
+
+    learner = SkillAliasLearner(db_session, Settings(_env_file=None), model=LowConfidence())
+    (proposal,) = learner.propose(["Brand New Tool"])
+    assert proposal.decision == expected
+
+
+def test_opposite_alias_decisions_collapse_to_one_canonical(db_session):
+    excel = Skill(canonical_name="Excel", origin="extracted")
+    ms_excel = Skill(canonical_name="MS Excel", origin="extracted")
+    job = Job(title="Analyst", description="Excel and MS Excel", content_hash="c" * 64)
+    db_session.add_all([excel, ms_excel, job])
+    db_session.flush()
+    db_session.add_all(
+        [
+            JobSkill(job_id=job.id, skill_id=excel.id, requirement_type=RequirementType.REQUIRED),
+            JobSkill(
+                job_id=job.id, skill_id=ms_excel.id, requirement_type=RequirementType.PREFERRED
+            ),
+        ]
+    )
+    db_session.commit()
+    ids = {"Excel": ms_excel.id, "MS Excel": excel.id}  # each points at the other
+    model = FakeModel(lambda name: {"decision": "same_as", "skill_id": ids[name]})
+    learner = SkillAliasLearner(db_session, Settings(_env_file=None), model=model)
+    learner.apply(learner.propose(["Excel", "MS Excel"]))
+
+    remaining = list(
+        db_session.scalars(select(Skill).where(Skill.canonical_name.in_(["Excel", "MS Excel"])))
+    )
+    assert len(remaining) == 1
+    canonical = remaining[0]
+    assert SkillNormalizer(db_session).resolve("Excel").id == canonical.id
+    assert SkillNormalizer(db_session).resolve("MS Excel").id == canonical.id
+    links = list(db_session.scalars(select(JobSkill).where(JobSkill.job_id == job.id)))
+    assert [(link.skill_id, link.requirement_type) for link in links] == [
+        (canonical.id, RequirementType.REQUIRED)
+    ]
