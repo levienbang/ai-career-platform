@@ -3,6 +3,7 @@
 import json
 from collections import Counter
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -10,7 +11,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.db.models import JobSkill, RequirementType, Skill, SkillAlias, SkillDecision
+from app.db.models import Company, Job, JobSkill, RequirementType, Skill, SkillAlias, SkillDecision
 from app.db.repositories import SkillRepository
 from app.ingestion.normalizer import skill_match_key
 
@@ -264,3 +265,35 @@ def seed_taxonomy(
                 existing.reason = None
     session.flush()
     return {name: skills[name] for name in definitions}
+
+
+def load_demo_jobs(session: Session, jobs: list[dict[str, Any]], skills: dict[str, Skill]) -> None:
+    """Persist demo jobs idempotently; the caller synchronizes taxonomy first."""
+    for item in jobs:
+        content_hash = sha256(item["description"].encode()).hexdigest()
+        if session.scalar(select(Job).where(Job.content_hash == content_hash)) is not None:
+            continue
+        company = session.scalar(select(Company).where(Company.name == item["company"]))
+        if company is None:
+            company = Company(name=item["company"], location=item["location"])
+            session.add(company)
+            session.flush()
+        job = Job(
+            title=item["title"],
+            company=company,
+            location=item["location"],
+            employment_type=item["employment_type"],
+            experience_years_min=item["experience_years_min"],
+            description=item["description"],
+            source_url=item["source_url"],
+            content_hash=content_hash,
+        )
+        job.skills = [
+            JobSkill(
+                skill=skills[name],
+                requirement_type=RequirementType.REQUIRED,
+                evidence_text=name,
+            )
+            for name in item["skills"]
+        ]
+        session.add(job)

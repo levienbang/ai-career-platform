@@ -63,6 +63,31 @@ Serena is available for semantic code navigation and project memory.
   state in Serena memory.
 - If a Serena memory conflicts with current source code or the project specification,
   treat the source code and `docs/PROJECT_SPEC.md` as authoritative.
+- Memories live in `.serena/memories/`; start from `core` and follow its `mem:`
+  references. Follow `memory_maintenance` for style and the update threshold.
+
+## Keeping docs and memory current
+
+Every task that changes code is incomplete until these are checked. Update only
+what the change actually affects; do not rewrite unrelated sections.
+
+| Change | Update |
+|---|---|
+| Source map, new module/endpoint, milestone state | Serena `core` |
+| Ingestion, retrieval, SQL safety, skill taxonomy/learning or scoring invariant | Serena `conventions` + README |
+| Chat/embedding provider, model or structured-output behavior | Serena `chat_provider` / `tech_stack` |
+| Dependency, version pin, new tool | Serena `tech_stack` + `pyproject.toml` |
+| New/changed script, CLI flag or run workflow | Serena `suggested_commands` + README |
+| New/changed check or completion gate | Serena `task_completion` |
+| New environment variable | `.env.example` + README |
+| Milestone finished | `docs/milestones/MILESTONE<N>_REPORT.md`; `docs/CURRENT_MILESTONE.md` set to the "no active milestone" note listing what finished; Serena `core` state line |
+
+- Use Serena `write_memory`/`edit_memory`. If Serena is not active for this
+  repository, edit the files in `.serena/memories/` directly.
+- Write memories as dense, durable bullets; never put logs, line numbers, temporary
+  debugging notes, secrets or CV content in them. Delete or fix a memory that the
+  change made wrong instead of appending a contradiction.
+- If nothing needed updating, say so in the final report.
 
 ## Technology constraints
 
@@ -143,4 +168,6 @@ After each implementation, report:
 - Commands used to run the project.
 - Tests executed and their actual results.
 - Remaining limitations.
+- Docs and Serena memories updated (see "Keeping docs and memory current"), or
+  that none needed changes.
 - Concepts the user should understand from the milestone.

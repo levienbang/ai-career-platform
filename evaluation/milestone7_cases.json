@@ -1,6 +1,6 @@
 {
   "dataset_version": 1,
-  "ground_truth_source": "Hand-labelled from data/seed_data.json before running Milestone 7 evaluations. SQL cases are restricted to the ten /eval/ seed URLs.",
+  "ground_truth_source": "Hand-labelled from data/examples/demo_jobs.json before running Milestone 7 evaluations. SQL cases are restricted to the ten /eval/ seed URLs.",
   "sql": [
     {"id": "sql-01", "question": "How many evaluation jobs exist?", "sql": "SELECT COUNT(*) AS count FROM jobs", "expected_count": 10},
     {"id": "sql-02", "question": "How many evaluation jobs require Docker?", "sql": "SELECT COUNT(*) AS count FROM jobs JOIN job_skills ON jobs.id = job_skills.job_id JOIN skills ON skills.id = job_skills.skill_id WHERE skills.canonical_name = 'Docker'", "expected_count": 3},

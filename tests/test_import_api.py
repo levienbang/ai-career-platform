@@ -2,7 +2,7 @@ from pathlib import Path
 
 from app.api.jobs import get_job_extractor
 
-DATA_FILE = Path(__file__).parents[1] / "data" / "sample_jobs.json"
+DATA_FILE = Path(__file__).parents[1] / "data" / "examples" / "sample_jobs.json"
 
 
 def test_import_endpoint_and_reimport(client, taxonomy, fake_extractor) -> None:

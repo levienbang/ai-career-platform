@@ -1,9 +1,12 @@
 # Technology Stack
-- Python >=3.12; package metadata/build via `pyproject.toml` and setuptools.
-- FastAPI + Pydantic Settings; Uvicorn ASGI server.
-- PostgreSQL 17 (Compose), SQLAlchemy 2, psycopg 3, Alembic.
-- Qdrant 1.19.1 (Compose) for dense vectors; in-process BM25 baseline; reciprocal-rank fusion; provider-backed reranking.
-- LangChain Core and Google GenAI integration are dependencies; LangGraph is roadmap-only and must not be added before independent tools are complete.
+- Python >=3.12; package metadata/build via `pyproject.toml` and setuptools; `uv.lock` present (`uv run …` or pip editable install).
+- FastAPI + Pydantic Settings; Uvicorn ASGI server; python-multipart for CSV/JSON/PDF uploads.
+- PostgreSQL 17 (Compose), SQLAlchemy 2, psycopg 3, Alembic; dedicated read-only role (`POSTGRES_READONLY_*`, `READONLY_DATABASE_URL`) for the SQL tool.
+- Qdrant 1.19.1 (Compose) for dense vectors; in-process BM25 baseline; reciprocal-rank fusion; LLM reranking.
+- Chat/structured output: DeepSeek via `langchain-deepseek` (see `mem:chat_provider`). Embeddings: Google `gemini-embedding-001` via `langchain-google-genai`, 768 dims, separate `EMBEDDING_API_KEY`.
+- LangGraph 1.x in use (`app/graph`) for question routing; LangChain Core for prompts/structured output; optional LangSmith tracing.
+- SQLGlot (PostgreSQL AST) validates generated SQL. docling-slim (+ rtree) loads CV PDFs.
+- `demo/` is a separate Streamlit app with its own `pyproject.toml`/`uv.lock`; it only calls the API.
 - Pytest, pytest-cov, HTTPX, Ruff are development dependencies.
-- Docker Compose runs PostgreSQL, Qdrant, and API; dev override bind-mounts source and enables Uvicorn reload.
-- Local `.venv` exists but may be empty; install with `python -m pip install -e '.[dev]'` before expecting LSP import resolution or local tests.
+- Docker Compose runs PostgreSQL, Qdrant, and API; dev override bind-mounts source and enables Uvicorn reload. Dockerfile installs dependencies before copying `app/`.
+- Not allowed unless explicitly requested: Redis, Celery, Kafka, Kubernetes, Airflow, multi-agent, fine-tuning, application tracking.

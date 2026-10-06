@@ -1,9 +1,10 @@
-# Current milestone — không có
+# Không có milestone đang hoạt động
 
-> Hiện **không có milestone đang làm**. Milestone 13 (sửa lỗi M12, index chịu
-> quota, LLM học alias skill) đã hoàn thành; các bản sửa sau đó (SQL `AND`/`OR`,
-> prompt SQL tiếng Việt, học alias không kẹt "pending", gộp hai chiều ngược nhau,
-> `index_jobs.py --payload-only`, áp dụng lại dry-run bằng `--from`) đã vào `main`.
->
-> Báo cáo các milestone đã xong nằm trong `docs/milestones/`. **Không implement lại
-> gì từ file này.** Khi có việc mới, user sẽ ghi đè file này bằng milestone mới.
+Đã hoàn thành Milestone 1–14. Milestone 14 hợp nhất danh mục skill vào
+`data/taxonomy/`, chuyển dữ liệu demo/import mẫu sang `data/examples/`, tách
+`scripts/sync_skills.py` và `scripts/load_demo_jobs.py`, bổ sung tài liệu script
+và kiểm tra kết quả dữ liệu không đổi.
+
+Báo cáo: `docs/milestones/MILESTONE14_REPORT.md`.
+
+Chờ user chỉ định milestone tiếp theo; không triển khai thêm từ roadmap.

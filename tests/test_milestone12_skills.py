@@ -15,7 +15,7 @@ from app.services.skill_taxonomy import (
     seed_taxonomy,
 )
 from scripts import merge_skills as merge_module
-from scripts import seed as seed_module
+from scripts import sync_skills as seed_module
 
 
 @pytest.mark.parametrize(
@@ -146,7 +146,7 @@ def test_seed_taxonomy_merges_existing_extracted_and_is_idempotent(db_session, m
     db_session.commit()
     job = add_job(db_session, [(extracted, RequirementType.REQUIRED)])
     monkeypatch.setattr(seed_module, "SessionLocal", sessionmaker(bind=db_session.get_bind()))
-    seed_module.seed(taxonomy_only=True)
+    seed_module.sync_skills()
     db_session.expire_all()
     normalizer = SkillNormalizer(db_session)
     skill = normalizer.resolve("sklearn")
@@ -158,7 +158,7 @@ def test_seed_taxonomy_merges_existing_extracted_and_is_idempotent(db_session, m
         db_session.scalar(select(func.count()).select_from(SkillAlias)),
     )
     db_session.commit()
-    seed_module.seed(taxonomy_only=True)
+    seed_module.sync_skills()
     assert first == (
         db_session.scalar(select(func.count()).select_from(Skill)),
         db_session.scalar(select(func.count()).select_from(SkillAlias)),

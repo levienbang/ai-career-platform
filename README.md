@@ -10,7 +10,7 @@ skill-gap report. Frontend and application tracking remain out of scope.
 ```bash
 cp .env.example .env
 docker compose up --build -d
-docker compose exec api python -m scripts.seed
+docker compose exec api python -m scripts.load_demo_jobs
 docker compose exec api python -m scripts.index_jobs
 curl http://localhost:8000/health
 curl http://localhost:8000/ready
@@ -76,7 +76,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e '.[dev]'
 alembic upgrade head
-python -m scripts.seed
+python -m scripts.load_demo_jobs
 uvicorn app.main:app --reload
 ```
 
@@ -102,7 +102,7 @@ requesting CV matches:
 ```bash
 # LLM repository, before delivery
 uv run alembic upgrade head
-uv run python -m scripts.seed --taxonomy-only
+uv run python -m scripts.sync_skills
 
 # Crawl repository
 DELIVERY_PAYLOAD_PROFILE=extended DELIVERY_MISSING_COMPANY=send_null \
@@ -150,19 +150,26 @@ was used proficiently.
 
 ## Job ingestion
 
-Seed the controlled skill taxonomy before importing jobs:
+Synchronize the reviewed skill taxonomy before importing real jobs:
 
 ```bash
-docker compose exec api python -m scripts.seed
+docker compose exec api python -m scripts.sync_skills
 ```
 
-The seed command loads the taxonomy and 12 demo jobs from `data/seed_data.json`.
-Use `python -m scripts.seed --taxonomy-only` (or add `--taxonomy-only` to the
-Docker command above) on a fresh database for real-data tests. This seeds or
-updates skills and aliases without creating companies or jobs; it leaves existing
-jobs in place.
-`data/sample_jobs.json` and `data/sample_jobs.csv` are separate import examples and
-test fixtures; they are not loaded by the seed command.
+This command creates or updates curated skills, merges extracted synonyms, and
+adds aliases without creating companies or jobs. It is idempotent and works on
+an existing database. `data/taxonomy/skill_aliases.json` is the single reviewed
+source; `data/taxonomy/skill_alias_blocklist.json` keeps distinct concepts apart.
+`SKILL_DATA_DIR` defaults to `data/taxonomy` relative to the working directory,
+including when empty. Maintenance scripts locate these files relative to their
+own location.
+
+For demo/evaluation only, use `python -m scripts.load_demo_jobs` on an isolated
+database. It synchronizes skills first and loads the 12 jobs from
+`data/examples/demo_jobs.json` in one transaction. Do not mix them with real
+Crawl data. `data/examples/sample_jobs.json` and `.csv` are import examples and
+test fixtures, loaded through `/jobs/import` rather than the demo command.
+See [scripts/README.md](scripts/README.md) for every maintenance command.
 
 Configure chat inference in `.env`:
 
@@ -208,7 +215,7 @@ not change embedding dimensions and does not require re-indexing.
 Import a small CSV or JSON file with:
 
 ```bash
-curl -F "file=@data/sample_jobs.json" http://localhost:8000/jobs/import
+curl -F "file=@data/examples/sample_jobs.json" http://localhost:8000/jobs/import
 ```
 
 The response reports `processed`, `inserted`, `skipped_duplicates`, `failed`, and
@@ -437,11 +444,11 @@ writes `evaluation/routing_results.json`.
 `evaluation/retrieval_cases.json` and `evaluation/agent_cases.json` retain their
 original 12 labels each. `evaluation/milestone7_cases.json` adds 5 SQL, 5 CV, and
 5 error/unanswerable cases, for 39 cases total. Labels were assigned from
-`data/seed_data.json` before measuring results. SQL counts are scoped to its ten
+`data/examples/demo_jobs.json` before measuring results. SQL counts are scoped to its ten
 `/eval/` jobs; CV fixtures contain synthetic skill text only.
 
 Run the deterministic suite in a fresh, isolated database containing only the
-12 jobs from `data/seed_data.json`. The evaluator rejects extra jobs because they
+12 jobs from `data/examples/demo_jobs.json`. The evaluator rejects extra jobs because they
 change retrieval rankings and make the fixed labels incomparable:
 
 ```bash
@@ -524,7 +531,7 @@ description.
 ## Skill maintenance (Milestone 12)
 
 Skill resolution ignores spaces and `.`, `-`, `_`, `/`, while preserving `+` and
-`#`. Synonyms come from the reviewed 55-group `data/skill_aliases.json`; source
+`#`. Synonyms come from the reviewed 55-group `data/taxonomy/skill_aliases.json`; source
 and CV evidence still require literal wording with word boundaries. New extracted
 skills are limited to five words and 50 characters. Parenthesized source lists
 such as `Libraries (Scikit-learn, TensorFlow)` become individual skills.
@@ -535,7 +542,7 @@ re-index before comparing CV results:
 ```bash
 docker compose exec api python -m scripts.merge_skills
 docker compose exec api python -m scripts.merge_skills --apply
-docker compose exec api python -m scripts.seed --taxonomy-only
+docker compose exec api python -m scripts.sync_skills
 docker compose exec api python -m scripts.index_jobs
 ```
 
@@ -563,7 +570,7 @@ only Google handles embeddings. No embeddings are used for alias decisions.
 ```bash
 docker compose up --build -d
 docker compose exec api alembic upgrade head
-docker compose exec api python scripts/seed.py --taxonomy-only
+docker compose exec api python scripts/sync_skills.py
 # Import extended JSON/CSV through POST /jobs/import, then optionally process old skills:
 docker compose exec api python scripts/learn_skill_aliases.py          # dry-run, saves decisions
 docker compose exec api python scripts/learn_skill_aliases.py --apply --from skill_learning_proposals.json
@@ -573,9 +580,9 @@ docker compose exec api python scripts/index_jobs.py --payload-only    # renamed
 docker compose exec api python scripts/index_jobs.py                   # embed new jobs only
 ```
 
-`SKILL_DATA_DIR` defaults to `data` relative to the application's working directory
-(`/app/data` in Docker); an empty value also means the default. Maintenance scripts
-locate the repository's `data` directory relative to their own file, so they work
+`SKILL_DATA_DIR` defaults to `data/taxonomy` relative to the application's working directory
+(`/app/data/taxonomy` in Docker); an empty value also means the default. Maintenance scripts
+locate the repository's `data/taxonomy` directory relative to their own file, so they work
 from another working directory and with a non-editable installed package.
 
 Aliases record their provenance: `curated` for the seeded alias file, `merge` for
@@ -598,7 +605,7 @@ skill with the returned category once its confidence reaches
 merging). A `same_as` that points at the name's own skill counts as keeping it.
 Low confidence or invalid candidate IDs become `pending`. Before applying, alias
 decisions are grouped so opposite directions (`Excel` → `MS Excel` and back)
-collapse to one canonical skill instead of merging into a removed one. `data/skill_alias_blocklist.json` blocks distinct concepts in both
+collapse to one canonical skill instead of merging into a removed one. `data/taxonomy/skill_alias_blocklist.json` blocks distinct concepts in both
 directions for learning and merging, even if the alias file proposes a merge.
 A model score is a confidence estimate, not a guarantee of correctness.
 

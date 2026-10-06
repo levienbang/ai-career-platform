@@ -30,7 +30,7 @@ def test_ground_truth_manifest_has_39_prelabelled_cases():
 
 def test_sql_ground_truth_matches_seed_fixture():
     manifest = json.loads((ROOT / "evaluation/milestone7_cases.json").read_text())
-    seed = json.loads((ROOT / "data/seed_data.json").read_text())
+    seed = json.loads((ROOT / "data/examples/demo_jobs.json").read_text())
     jobs = [
         job for job in seed["jobs"] if job["source_url"].startswith("https://example.com/eval/")
     ]
@@ -51,7 +51,7 @@ def test_fake_provider_and_router_are_deterministic():
 
 
 def test_evaluation_rejects_contaminated_corpus():
-    seed = json.loads((ROOT / "data/seed_data.json").read_text())
+    seed = json.loads((ROOT / "data/examples/demo_jobs.json").read_text())
     source_urls = [job["source_url"] for job in seed["jobs"]]
     validate_seed_corpus(source_urls)
     with pytest.raises(RuntimeError, match="only the seed jobs"):

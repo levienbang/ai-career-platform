@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_env: str = "development"
-    skill_data_dir: Path = Path("data")
+    skill_data_dir: Path = Path("data/taxonomy")
     skill_alias_learning: bool = True
     skill_alias_auto_confidence: float = Field(default=0.9, ge=0.5, le=1.0)
     # Keeping a name as its own skill is low risk, so it needs less certainty than a merge.
@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     @field_validator("skill_data_dir", mode="before")
     @classmethod
     def default_skill_data_dir(cls, value):
-        return value or Path("data")
+        return value or Path("data/taxonomy")
 
     database_url: str = "postgresql+psycopg://career:career@localhost:5432/career"
     readonly_database_url: str | None = None

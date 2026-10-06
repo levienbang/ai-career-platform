@@ -18,7 +18,7 @@ from app.db.session import SessionLocal
 from app.ingestion.normalizer import skill_match_key
 from app.services.skill_learning import LearningProposal, SkillAliasLearner
 
-DATA_DIR = Path(__file__).parents[1] / "data"
+DATA_DIR = Path(__file__).parents[1] / "data" / "taxonomy"
 DEFAULT_PROPOSALS = Path("skill_learning_proposals.json")
 
 

@@ -1,4 +1,45 @@
 {
+  "Python": {
+    "category": "programming",
+    "aliases": [
+      "python"
+    ]
+  },
+  "Docker": {
+    "category": "platform",
+    "aliases": [
+      "docker"
+    ]
+  },
+  "FastAPI": {
+    "category": "framework",
+    "aliases": [
+      "fast api",
+      "fastapi"
+    ]
+  },
+  "PostgreSQL": {
+    "category": "database",
+    "aliases": [
+      "postgres",
+      "postgresql",
+      "postgre sql"
+    ]
+  },
+  "LangChain": {
+    "category": "framework",
+    "aliases": [
+      "lang chain",
+      "langchain"
+    ]
+  },
+  "Computer Vision": {
+    "category": "domain",
+    "aliases": [
+      "computer vision",
+      "cv"
+    ]
+  },
   "Scikit-learn": {
     "category": "library",
     "aliases": [
@@ -27,13 +68,6 @@
     "category": "platform",
     "aliases": [
       "k8s"
-    ]
-  },
-  "PostgreSQL": {
-    "category": "database",
-    "aliases": [
-      "postgres",
-      "postgre sql"
     ]
   },
   "JavaScript": {
@@ -157,12 +191,6 @@
       "large language model"
     ]
   },
-  "Computer Vision": {
-    "category": "domain",
-    "aliases": [
-      "cv"
-    ]
-  },
   "Hugging Face": {
     "category": "library",
     "aliases": [
@@ -208,10 +236,6 @@
     "category": "platform",
     "aliases": []
   },
-  "Docker": {
-    "category": "platform",
-    "aliases": []
-  },
   "Linux": {
     "category": "platform",
     "aliases": []
@@ -231,22 +255,6 @@
   "LightGBM": {
     "category": "library",
     "aliases": []
-  },
-  "Python": {
-    "category": "programming",
-    "aliases": []
-  },
-  "FastAPI": {
-    "category": "framework",
-    "aliases": [
-      "fast api"
-    ]
-  },
-  "LangChain": {
-    "category": "framework",
-    "aliases": [
-      "lang chain"
-    ]
   },
   "PL/SQL": {
     "category": "programming",

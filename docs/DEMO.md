@@ -12,6 +12,12 @@ cd demo && uv run streamlit run app.py     # giao diện chat (cổng 8501)
 
 Mở <http://localhost:8501>. Swagger vẫn ở <http://localhost:8000/docs>.
 
+Đồng bộ danh mục bằng `python -m scripts.sync_skills` trước khi import dữ liệu
+thật. Các file mẫu import nằm ở `data/examples/sample_jobs.json` và `.csv`.
+Nếu dùng corpus demo/evaluation trên DB riêng, chạy
+`python -m scripts.load_demo_jobs` để nạp `data/examples/demo_jobs.json`;
+không trộn 12 job này với dữ liệu thật từ Crawl. Xem `scripts/README.md`.
+
 ## Kịch bản 3 phút
 
 1. **Thống kê (SQL):** gõ *"Có bao nhiêu job software ở Hồ Chí Minh?"* → route `sql`,

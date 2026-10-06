@@ -14,7 +14,7 @@ from app.services.skill_taxonomy import (
 
 def merge_skills(*, apply: bool = False) -> int:
     with SessionLocal.begin() as session:
-        data_dir = Path(__file__).parents[1] / "data"
+        data_dir = Path(__file__).parents[1] / "data" / "taxonomy"
         blocklist = load_skill_blocklist(data_dir / "skill_alias_blocklist.json")
         plan = plan_skill_merges(
             session, load_skill_aliases(data_dir / "skill_aliases.json"), blocklist=blocklist

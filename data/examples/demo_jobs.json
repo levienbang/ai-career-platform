@@ -1,47 +1,4 @@
 {
-  "taxonomy": {
-    "Python": {
-      "category": "programming",
-      "aliases": [
-        "python"
-      ]
-    },
-    "Docker": {
-      "category": "platform",
-      "aliases": [
-        "docker"
-      ]
-    },
-    "FastAPI": {
-      "category": "framework",
-      "aliases": [
-        "fast api",
-        "fastapi"
-      ]
-    },
-    "PostgreSQL": {
-      "category": "database",
-      "aliases": [
-        "postgres",
-        "postgresql",
-        "postgre sql"
-      ]
-    },
-    "LangChain": {
-      "category": "framework",
-      "aliases": [
-        "lang chain",
-        "langchain"
-      ]
-    },
-    "Computer Vision": {
-      "category": "domain",
-      "aliases": [
-        "computer vision",
-        "cv"
-      ]
-    }
-  },
   "jobs": [
     {
       "title": "AI Engineer Intern",

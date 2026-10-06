@@ -41,7 +41,9 @@ RESULTS_FILE = ROOT / "milestone7_results.json"
 
 
 def validate_seed_corpus(source_urls: list[str | None]) -> None:
-    seed = json.loads((ROOT.parent / "data" / "seed_data.json").read_text(encoding="utf-8"))
+    seed = json.loads(
+        (ROOT.parent / "data" / "examples" / "demo_jobs.json").read_text(encoding="utf-8")
+    )
     expected = {job["source_url"] for job in seed["jobs"]}
     if len(source_urls) != len(expected) or set(source_urls) != expected:
         raise RuntimeError(
@@ -216,7 +218,9 @@ def _sql(session, cases: list[dict], settings: Settings) -> tuple[dict, list[flo
     latencies = []
     source_urls = [
         job["source_url"]
-        for job in json.loads((ROOT.parent / "data" / "seed_data.json").read_text())["jobs"]
+        for job in json.loads((ROOT.parent / "data" / "examples" / "demo_jobs.json").read_text())[
+            "jobs"
+        ]
         if job["source_url"].startswith("https://example.com/eval/")
     ]
     job_ids = [job.id for job in JobRepository(session).get_by_source_urls(source_urls)]

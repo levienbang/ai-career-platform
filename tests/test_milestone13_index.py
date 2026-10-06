@@ -1,3 +1,4 @@
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -8,20 +9,22 @@ from app.db.models import Job, JobSkill, RequirementType, Skill
 from app.retrieval.embeddings import EmbeddingServiceError
 from app.retrieval.qdrant import QdrantJobIndex
 from app.services.skill_taxonomy import load_skill_aliases
-from scripts import merge_skills, seed
+from scripts import load_demo_jobs, merge_skills, sync_skills
 
 
 def test_scripts_find_taxonomy_from_other_cwd(db_session, monkeypatch, tmp_path):
     factory = sessionmaker(bind=db_session.get_bind())
-    monkeypatch.setattr(seed, "SessionLocal", factory)
+    monkeypatch.setattr(sync_skills, "SessionLocal", factory)
+    monkeypatch.setattr(load_demo_jobs, "SessionLocal", factory)
     monkeypatch.setattr(merge_skills, "SessionLocal", factory)
     monkeypatch.chdir(tmp_path)
-    seed.seed(taxonomy_only=True)
+    sync_skills.sync_skills()
+    load_demo_jobs.load_demo_jobs()
     assert merge_skills.merge_skills() == 0
     with pytest.raises(FileNotFoundError, match="SKILL_DATA_DIR") as caught:
         load_skill_aliases(tmp_path / "missing.json")
     assert str(tmp_path / "missing.json") in str(caught.value)
-    assert Settings(_env_file=None, skill_data_dir="").skill_data_dir.name == "data"
+    assert Settings(_env_file=None, skill_data_dir="").skill_data_dir == Path("data/taxonomy")
 
 
 class Clock:

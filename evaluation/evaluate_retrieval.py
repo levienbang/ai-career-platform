@@ -48,7 +48,7 @@ def _resolve_relevant_ids(session, source_urls: list[str]) -> set[int]:
     missing = sorted(set(source_urls) - set(resolved))
     if missing:
         raise RuntimeError(
-            "Evaluation jobs are missing from PostgreSQL; run python -m scripts.seed. "
+            "Evaluation jobs are missing from PostgreSQL; run python -m scripts.load_demo_jobs. "
             f"Missing: {missing}"
         )
     return {resolved[source_url] for source_url in source_urls}

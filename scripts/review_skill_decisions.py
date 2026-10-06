@@ -10,7 +10,7 @@ from app.db.models import Skill, SkillDecision
 from app.db.session import SessionLocal
 from app.services.skill_review import approve_decision, keep_new_decision, revert_alias
 
-DATA_DIR = Path(__file__).parents[1] / "data"
+DATA_DIR = Path(__file__).parents[1] / "data" / "taxonomy"
 
 
 def review_skill_decisions(

@@ -4,7 +4,7 @@ import pytest
 
 from app.ingestion.loader import JobLoadError, load_job_records
 
-DATA_DIR = Path(__file__).parents[1] / "data"
+DATA_DIR = Path(__file__).parents[1] / "data" / "examples"
 
 
 def test_load_json_records() -> None:

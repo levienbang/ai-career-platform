@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from app.db.models import Company, Job, JobSkill
 from app.ingestion.pipeline import JobIngestionPipeline
 
-DATA_FILE = Path(__file__).parents[1] / "data" / "sample_jobs.json"
+DATA_FILE = Path(__file__).parents[1] / "data" / "examples" / "sample_jobs.json"
 
 
 def load_fixture() -> list[dict[str, object]]:
