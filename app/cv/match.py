@@ -5,12 +5,12 @@ from typing import Protocol
 from sqlalchemy.orm import Session
 
 from app.config import Settings
+from app.cv.extractor import StructuredCVExtractor
+from app.cv.gap import _job_gap, recognize_cv_skills
+from app.cv.pdf import PDFTextLoader
 from app.db.repositories import JobRepository
 from app.retrieval.types import SearchHit
 from app.schemas.cv import CVExtraction, CVMatchedJob, CVMatchReport, RecognizedSkill
-from app.services.cv_extractor import StructuredCVExtractor
-from app.services.cv_pdf import PDFTextLoader
-from app.services.skill_gap import _job_gap, recognize_cv_skills
 
 
 class DenseSearchBackend(Protocol):

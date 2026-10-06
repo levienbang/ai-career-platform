@@ -8,7 +8,7 @@ from app.config import Settings
 from app.db.models import Job, JobSkill, RequirementType, Skill
 from app.retrieval.embeddings import EmbeddingServiceError
 from app.retrieval.qdrant import QdrantJobIndex
-from app.services.skill_taxonomy import load_skill_aliases
+from app.skills.taxonomy import load_skill_aliases
 from scripts import load_demo_jobs, merge_skills, sync_skills
 
 

@@ -1,4 +1,4 @@
-from app.services.cv_pdf import markdown_to_text
+from app.cv.pdf import markdown_to_text
 
 
 def test_docling_entities_are_decoded_for_evidence_matching():

@@ -1,6 +1,6 @@
 # Project Conventions
 - Prefer simple readable code and avoid premature abstractions or dependencies not required by the current milestone.
-- Keep API schemas explicit; routes delegate business logic to services/retrieval/ingestion modules.
+- Keep API schemas explicit; routes delegate business logic to domain modules (ingestion, retrieval, cv, skills, graph); tests are named by feature, not milestone.
 - Add or update tests for every behavior change; deterministic fake extractors, embedders, rerankers, and in-memory/test services avoid paid provider calls.
 - Ruff: 100-character line length, Python 3.12 target; lint families E, F, I, B, UP.
 - Expected failures require explicit error handling; never hide failing checks.

@@ -7,7 +7,7 @@ import argparse
 from pathlib import Path
 
 from app.db.session import SessionLocal
-from app.services.skill_taxonomy import load_skill_aliases, load_skill_blocklist, seed_taxonomy
+from app.skills.taxonomy import load_skill_aliases, load_skill_blocklist, seed_taxonomy
 
 DATA_DIR = Path(__file__).parents[1] / "data" / "taxonomy"
 

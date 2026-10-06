@@ -2,13 +2,13 @@ from io import BytesIO
 
 from app.api.cv import get_cv_match_service
 from app.config import Settings
+from app.cv.gap import recognize_cv_skills
+from app.cv.match import CVMatchService, build_cv_query
 from app.db.models import Job, JobSkill, RequirementType
 from app.main import app
 from app.retrieval.qdrant import SearchIndexNotReadyError
 from app.retrieval.types import SearchHit
 from app.schemas.cv import CVExtraction, CVSkillClaim, RecognizedSkill
-from app.services.cv_match import CVMatchService, build_cv_query
-from app.services.skill_gap import recognize_cv_skills
 
 
 class FakeLoader:

@@ -16,7 +16,7 @@ from app.db.models import JobSkill, Skill, SkillAlias, SkillDecision
 from app.ingestion.extractor import _shared_throttle
 from app.ingestion.normalizer import SkillNormalizer, skill_match_key
 from app.llm import build_structured_chat_model
-from app.services.skill_taxonomy import (
+from app.skills.taxonomy import (
     SkillMergeGroup,
     apply_skill_merges,
     blocked_skill_pair,

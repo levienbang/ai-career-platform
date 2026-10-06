@@ -10,6 +10,8 @@ from time import perf_counter
 from qdrant_client import QdrantClient
 
 from app.config import Settings
+from app.cv.gap import TargetJobError, analyze_skill_gap
+from app.cv.pdf import CVPDFError, validate_cv_pdf
 from app.db.repositories import JobRepository
 from app.db.session import SessionLocal
 from app.graph.builder import CareerAgent
@@ -20,8 +22,6 @@ from app.retrieval.keyword import KeywordSearchService
 from app.retrieval.qdrant import QdrantJobIndex
 from app.retrieval.reranker import RerankedSearchService
 from app.schemas.cv import CVExtraction, CVSkillClaim
-from app.services.cv_pdf import CVPDFError, validate_cv_pdf
-from app.services.skill_gap import TargetJobError, analyze_skill_gap
 from app.tools.search_tool import RerankedJobSearchTool, SearchToolResult
 from app.tools.sql_tool import (
     PostgreSQLReadOnlyExecutor,

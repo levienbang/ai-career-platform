@@ -67,11 +67,11 @@ def test_vietjobs_batch_optional_company_and_open_taxonomy(db_session, taxonomy,
 
 
 def test_search_document_and_job_response_keep_null_company(db_session, client, fake_reranker):
+    from app.jobs import get_job
     from app.retrieval.dense import DenseSearchService
     from app.retrieval.documents import build_search_document
     from app.retrieval.keyword import KeywordSearchService
     from app.retrieval.reranker import RerankedSearchService
-    from app.services.jobs import get_job
     from app.tools.search_tool import RerankedJobSearchTool
 
     job = Job(title="AI Engineer", description="Python work", content_hash="a" * 64)

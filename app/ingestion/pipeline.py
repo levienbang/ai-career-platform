@@ -150,7 +150,7 @@ class JobIngestionPipeline:
                             )
 
             if self.settings.skill_alias_learning:
-                from app.services.skill_learning import SkillAliasLearner
+                from app.skills.learning import SkillAliasLearner
 
                 normalizer = SkillNormalizer(self.session)
                 names = []

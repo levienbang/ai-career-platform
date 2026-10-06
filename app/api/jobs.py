@@ -13,9 +13,9 @@ from app.ingestion.extractor import (
 )
 from app.ingestion.loader import JobLoadError, load_job_records
 from app.ingestion.pipeline import JobIngestionPipeline
+from app.jobs import JobNotFoundError, get_job, list_jobs
 from app.schemas.ingestion import ImportResult
 from app.schemas.jobs import JobResponse
-from app.services.jobs import JobNotFoundError, get_job, list_jobs
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 DbSession = Annotated[Session, Depends(get_db)]

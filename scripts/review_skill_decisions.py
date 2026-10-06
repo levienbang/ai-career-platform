@@ -8,7 +8,7 @@ from sqlalchemy import select
 from app.config import Settings
 from app.db.models import Skill, SkillDecision
 from app.db.session import SessionLocal
-from app.services.skill_review import approve_decision, keep_new_decision, revert_alias
+from app.skills.review import approve_decision, keep_new_decision, revert_alias
 
 DATA_DIR = Path(__file__).parents[1] / "data" / "taxonomy"
 

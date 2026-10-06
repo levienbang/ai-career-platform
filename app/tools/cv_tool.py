@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
 
+from app.cv.extractor import StructuredCVExtractor
+from app.cv.gap import analyze_skill_gap
+from app.cv.pdf import PDFTextLoader
 from app.schemas.cv import CVGapReport
-from app.services.cv_extractor import StructuredCVExtractor
-from app.services.cv_pdf import PDFTextLoader
-from app.services.skill_gap import analyze_skill_gap
 
 
 class CVSkillGapTool:

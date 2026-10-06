@@ -10,8 +10,8 @@ from app.config import Settings
 from app.db.models import Job, JobSkill, RequirementType, Skill, SkillAlias, SkillDecision
 from app.ingestion.normalizer import SkillNormalizer, skill_match_key
 from app.ingestion.pipeline import JobIngestionPipeline
-from app.services.skill_learning import SkillAliasLearner
-from app.services.skill_taxonomy import (
+from app.skills.learning import SkillAliasLearner
+from app.skills.taxonomy import (
     SkillMergeGroup,
     apply_skill_merges,
     load_skill_aliases,
@@ -82,9 +82,9 @@ def test_import_learns_alias_reuses_it_and_cv_match(db_session, fake_extractor, 
     assert pipeline.import_records([record("Scikit learn lib", 2)]).inserted == 1
     assert learner.llm_calls == len(model.calls) == 1
     # Exercise the CV service used by /cv/match with deterministic search and extraction.
+    from app.cv.match import CVMatchService
     from app.retrieval.types import SearchHit
     from app.schemas.cv import CVExtraction, CVSkillClaim
-    from app.services.cv_match import CVMatchService
 
     profile = CVExtraction(skills=[CVSkillClaim(name="Scikit-learn", evidence="Scikit-learn")])
     hit = SearchHit(
@@ -322,7 +322,7 @@ def test_review_approve_keep_new_revert_and_rejected_cache(db_session, monkeypat
 
 @pytest.mark.parametrize("source", ["curated", "merge"])
 def test_revert_refuses_non_llm_alias(db_session, source):
-    from app.services.skill_review import revert_alias
+    from app.skills.review import revert_alias
 
     canonical = Skill(canonical_name="Python")
     db_session.add(canonical)
@@ -400,7 +400,7 @@ def test_batch_aliases_can_target_a_skill_merged_earlier(db_session):
 
 
 def test_revert_preserves_collision_evidence(db_session):
-    from app.services.skill_review import revert_alias
+    from app.skills.review import revert_alias
 
     canonical = Skill(canonical_name="Tool")
     old = Skill(canonical_name="Tool lib", origin="extracted")
@@ -426,7 +426,7 @@ def test_revert_preserves_collision_evidence(db_session):
 
 
 def test_revert_alias_containing_canonical_does_not_keep_false_claim(db_session):
-    from app.services.skill_review import revert_alias
+    from app.skills.review import revert_alias
 
     canonical = Skill(canonical_name="Tool")
     db_session.add(canonical)
@@ -444,7 +444,7 @@ def test_revert_alias_containing_canonical_does_not_keep_false_claim(db_session)
 
 
 def test_seed_alias_provenance_and_learning_canonical_display(db_session):
-    from app.services.skill_taxonomy import seed_taxonomy
+    from app.skills.taxonomy import seed_taxonomy
 
     old = Skill(canonical_name="Elastic Search", origin="curated")
     db_session.add(old)

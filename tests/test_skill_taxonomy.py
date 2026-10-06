@@ -2,13 +2,13 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import sessionmaker
 
+from app.cv.gap import analyze_skill_gap
 from app.db.models import Job, JobSkill, RequirementType, Skill, SkillAlias
 from app.ingestion.normalizer import SkillNormalizer, skill_match_key
 from app.ingestion.pipeline import JobIngestionPipeline
 from app.ingestion.structured import parse_skill_list
 from app.schemas.cv import CVExtraction, CVSkillClaim
-from app.services.skill_gap import analyze_skill_gap
-from app.services.skill_taxonomy import (
+from app.skills.taxonomy import (
     apply_skill_merges,
     load_skill_aliases,
     plan_skill_merges,
@@ -240,8 +240,8 @@ def test_cv_match_sklearn_job_has_full_skill_score_after_seed(db_session):
     from types import SimpleNamespace
 
     from app.config import Settings
+    from app.cv.match import CVMatchService
     from app.retrieval.types import SearchHit
-    from app.services.cv_match import CVMatchService
 
     extracted = Skill(canonical_name="sklearn", origin="extracted")
     db_session.add(extracted)

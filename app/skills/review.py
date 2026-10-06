@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.config import Settings
 from app.db.models import JobSkill, Skill, SkillAlias, SkillDecision
 from app.ingestion.normalizer import SkillNormalizer, skill_lookup_key, skill_match_key
-from app.services.skill_learning import LearningProposal, SkillAliasLearner
+from app.skills.learning import LearningProposal, SkillAliasLearner
 
 
 def find_decision(session: Session, name: str, *, pending: bool = False) -> SkillDecision:

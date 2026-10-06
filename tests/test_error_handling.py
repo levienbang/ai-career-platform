@@ -7,12 +7,12 @@ from qdrant_client import models
 from app.api.cv import get_cv_match_service
 from app.api.search import get_embedding_provider, get_job_reranker, get_vector_client
 from app.config import Settings
+from app.cv.match import CVMatchService
 from app.ingestion.extractor import ExtractionError, LangChainJobExtractor
 from app.retrieval.dense import DenseSearchService
 from app.retrieval.qdrant import SearchIndexNotReadyError, VectorStoreUnavailableError
 from app.schemas.cv import CVExtraction
 from app.schemas.ingestion import RawJobRecord
-from app.services.cv_match import CVMatchService
 
 
 def failing_extractor(monkeypatch, error, *, retries=1):

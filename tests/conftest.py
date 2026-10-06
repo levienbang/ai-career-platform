@@ -156,4 +156,4 @@ def prevent_paid_alias_calls(monkeypatch):
     def unavailable(*args, **kwargs):
         raise RuntimeError("Tests require an explicit fake alias model")
 
-    monkeypatch.setattr("app.services.skill_learning.build_structured_chat_model", unavailable)
+    monkeypatch.setattr("app.skills.learning.build_structured_chat_model", unavailable)

@@ -5,11 +5,11 @@ from types import ModuleType, SimpleNamespace
 import pytest
 
 from app.api.cv import get_cv_tool
+from app.cv.gap import TargetJobError, analyze_skill_gap
+from app.cv.pdf import CVPDFError, DoclingPDFTextLoader, validate_cv_pdf
 from app.db.models import Company, Job, JobSkill, RequirementType
 from app.main import app
 from app.schemas.cv import CVExtraction, CVSkillClaim
-from app.services.cv_pdf import CVPDFError, DoclingPDFTextLoader, validate_cv_pdf
-from app.services.skill_gap import TargetJobError, analyze_skill_gap
 from app.tools.cv_tool import CVSkillGapTool
 
 

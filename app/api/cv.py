@@ -7,20 +7,20 @@ from sqlalchemy.orm import Session
 
 from app.api.search import get_embedding_provider, get_vector_client
 from app.config import Settings, get_settings
-from app.db.session import get_db
-from app.retrieval.dense import DenseSearchService
-from app.retrieval.embeddings import EmbeddingProvider, EmbeddingServiceError
-from app.retrieval.qdrant import SearchIndexNotReadyError, VectorStoreUnavailableError
-from app.schemas.cv import CVGapReport, CVMatchReport
-from app.services.cv_extractor import CVExtractorError, LangChainCVExtractor
-from app.services.cv_match import CVMatchService
-from app.services.cv_pdf import (
+from app.cv.extractor import CVExtractorError, LangChainCVExtractor
+from app.cv.gap import TargetJobError
+from app.cv.match import CVMatchService
+from app.cv.pdf import (
     CVPDFError,
     DoclingPDFTextLoader,
     PDFParserUnavailableError,
     validate_cv_pdf,
 )
-from app.services.skill_gap import TargetJobError
+from app.db.session import get_db
+from app.retrieval.dense import DenseSearchService
+from app.retrieval.embeddings import EmbeddingProvider, EmbeddingServiceError
+from app.retrieval.qdrant import SearchIndexNotReadyError, VectorStoreUnavailableError
+from app.schemas.cv import CVGapReport, CVMatchReport
 from app.tools.cv_tool import CVSkillGapTool
 
 router = APIRouter(prefix="/cv", tags=["cv"])

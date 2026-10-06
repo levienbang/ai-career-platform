@@ -10,10 +10,10 @@ from pathlib import Path
 from typing import Any
 
 from app.db.session import SessionLocal
-from app.services.skill_taxonomy import (
+from app.skills.taxonomy import (
     load_demo_jobs as persist_demo_jobs,
 )
-from app.services.skill_taxonomy import (
+from app.skills.taxonomy import (
     load_skill_aliases,
     load_skill_blocklist,
     seed_taxonomy,

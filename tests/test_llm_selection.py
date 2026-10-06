@@ -4,13 +4,13 @@ import pytest
 from pydantic import ValidationError
 
 from app.config import Settings
+from app.cv.extractor import CVExtractorError, LangChainCVExtractor
 from app.graph.router import AgentRouterConfigurationError, LangChainQuestionRouter, RouteDecision
 from app.ingestion.extractor import ExtractorConfigurationError, LangChainJobExtractor
 from app.llm import ChatModelConfigurationError, build_structured_chat_model
 from app.retrieval.reranker import LangChainJobReranker, RerankerConfigurationError, RerankOutput
 from app.schemas.cv import CVExtraction
 from app.schemas.ingestion import JobBatchExtraction, JobExtraction
-from app.services.cv_extractor import CVExtractorError, LangChainCVExtractor
 from app.tools.sql_tool import LangChainSQLGenerator, SQLPlan, SQLToolConfigurationError
 
 
