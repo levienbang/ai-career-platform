@@ -1,0 +1,1283 @@
+{
+  "corpus": "941 real Crawl jobs (VietJobs IT + Fake Jobs) in the platform database",
+  "model": "deepseek-v4-flash",
+  "routing": {
+    "accuracy": 1,
+    "median_latency_ms": 749.0,
+    "cases": [
+      {
+        "question": "Tìm job Computer Vision phù hợp fresher biết Python",
+        "expected_route": "search",
+        "actual_route": "search",
+        "correct": true,
+        "latency_ms": 766,
+        "error": null
+      },
+      {
+        "question": "Tìm việc backend AI remote dùng FastAPI và PostgreSQL",
+        "expected_route": "search",
+        "actual_route": "search",
+        "correct": true,
+        "latency_ms": 975,
+        "error": null
+      },
+      {
+        "question": "Công việc nào gần với project phân tích ảnh và video của tôi?",
+        "expected_route": "search",
+        "actual_route": "search",
+        "correct": true,
+        "latency_ms": 985,
+        "error": null
+      },
+      {
+        "question": "Tìm internship AI có dùng Docker",
+        "expected_route": "search",
+        "actual_route": "search",
+        "correct": true,
+        "latency_ms": 1184,
+        "error": null
+      },
+      {
+        "question": "Có tổng cộng bao nhiêu job?",
+        "expected_route": "sql",
+        "actual_route": "sql",
+        "correct": true,
+        "latency_ms": 562,
+        "error": null
+      },
+      {
+        "question": "Có bao nhiêu internship tại Ho Chi Minh City?",
+        "expected_route": "sql",
+        "actual_route": "sql",
+        "correct": true,
+        "latency_ms": 548,
+        "error": null
+      },
+      {
+        "question": "Kỹ năng nào xuất hiện thường xuyên nhất trong các job?",
+        "expected_route": "sql",
+        "actual_route": "sql",
+        "correct": true,
+        "latency_ms": 568,
+        "error": null
+      },
+      {
+        "question": "Đếm số job theo location",
+        "expected_route": "sql",
+        "actual_route": "sql",
+        "correct": true,
+        "latency_ms": 732,
+        "error": null
+      },
+      {
+        "question": "Bao nhiêu job yêu cầu Docker?",
+        "expected_route": "sql",
+        "actual_route": "sql",
+        "correct": true,
+        "latency_ms": 1395,
+        "error": null
+      },
+      {
+        "question": "Tìm job Computer Vision cho fresher và cho biết tổng số job Computer Vision",
+        "expected_route": "both",
+        "actual_route": "both",
+        "correct": true,
+        "latency_ms": 440,
+        "error": null
+      },
+      {
+        "question": "Tìm internship AI phù hợp rồi thống kê kỹ năng phổ biến nhất",
+        "expected_route": "both",
+        "actual_route": "both",
+        "correct": true,
+        "latency_ms": 619,
+        "error": null
+      },
+      {
+        "question": "Tìm job remote dùng Python và đếm số job remote trong dữ liệu",
+        "expected_route": "both",
+        "actual_route": "both",
+        "correct": true,
+        "latency_ms": 815,
+        "error": null
+      }
+    ]
+  },
+  "sql": {
+    "accuracy": 0.6,
+    "cases": [
+      {
+        "id": "sql-01",
+        "question": "Có tổng cộng bao nhiêu job?",
+        "sql": "SELECT COUNT(*) AS total_jobs FROM jobs LIMIT 100",
+        "answer": [
+          [
+            941
+          ]
+        ],
+        "correct": true,
+        "latency_ms": 1913,
+        "error": null
+      },
+      {
+        "id": "sql-02",
+        "question": "Có bao nhiêu job có kỹ năng Python?",
+        "sql": "SELECT COUNT(DISTINCT j.id) AS python_job_count FROM jobs AS j JOIN job_skills AS js ON js.job_id = j.id JOIN skills AS s ON s.id = js.skill_id WHERE s.canonical_name ILIKE '%python%' LIMIT 100",
+        "answer": [
+          [
+            243
+          ]
+        ],
+        "correct": false,
+        "latency_ms": 943,
+        "error": null
+      },
+      {
+        "id": "sql-03",
+        "question": "Có bao nhiêu job thực tập?",
+        "sql": "SELECT COUNT(*) AS internship_jobs FROM jobs WHERE employment_type ILIKE '%intern%' OR employment_type ILIKE '%thực tập%' OR employment_type ILIKE '%thuc tap%' OR title ILIKE '%intern%' OR title ILIKE '%thực tập%' OR title ILIKE '%thuc tap%' LIMIT 100",
+        "answer": [
+          [
+            42
+          ]
+        ],
+        "correct": false,
+        "latency_ms": 931,
+        "error": null
+      },
+      {
+        "id": "sql-04",
+        "question": "Có bao nhiêu job ở Đà Nẵng?",
+        "sql": "SELECT COUNT(*) AS job_count FROM jobs WHERE location ILIKE '%đà nẵng%' OR location ILIKE '%da nang%' OR location ILIKE '%danang%' LIMIT 100",
+        "answer": [
+          [
+            14
+          ]
+        ],
+        "correct": true,
+        "latency_ms": 3430,
+        "error": null
+      },
+      {
+        "id": "sql-05",
+        "question": "Kỹ năng nào xuất hiện trong nhiều job nhất?",
+        "sql": "SELECT s.canonical_name, COUNT(DISTINCT js.job_id) AS job_count FROM job_skills AS js JOIN skills AS s ON s.id = js.skill_id GROUP BY s.canonical_name ORDER BY job_count DESC LIMIT 10",
+        "answer": [
+          [
+            "Python",
+            239
+          ],
+          [
+            "Java",
+            195
+          ],
+          [
+            "SQL",
+            178
+          ]
+        ],
+        "correct": true,
+        "latency_ms": 1639,
+        "error": null
+      }
+    ]
+  },
+  "retrieval": {
+    "keyword": {
+      "precision_at_5": 0.98,
+      "mrr_at_10": 1.0,
+      "median_latency_ms": 257.8
+    },
+    "dense": {
+      "precision_at_5": 1.0,
+      "mrr_at_10": 1.0,
+      "median_latency_ms": 393.6
+    },
+    "hybrid": {
+      "precision_at_5": 1.0,
+      "mrr_at_10": 1.0,
+      "median_latency_ms": 280.5
+    },
+    "cases": [
+      {
+        "id": "ret-01",
+        "query": "Kỹ sư AI / Machine Learning làm mô hình deep learning",
+        "relevant_count": 67,
+        "keyword": {
+          "top10": [
+            115,
+            31,
+            126,
+            113,
+            17,
+            45,
+            12,
+            376,
+            9,
+            37
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "dense": {
+          "top10": [
+            18,
+            17,
+            11,
+            25,
+            376,
+            12,
+            39,
+            2,
+            29,
+            19
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            17,
+            31,
+            376,
+            12,
+            11,
+            126,
+            115,
+            39,
+            113,
+            9
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        }
+      },
+      {
+        "id": "ret-02",
+        "query": "Lập trình viên Flutter phát triển ứng dụng di động",
+        "relevant_count": 30,
+        "keyword": {
+          "top10": [
+            448,
+            132,
+            168,
+            493,
+            364,
+            177,
+            511,
+            483,
+            565,
+            532
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "dense": {
+          "top10": [
+            177,
+            717,
+            306,
+            483,
+            448,
+            493,
+            620,
+            168,
+            450,
+            618
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            448,
+            177,
+            493,
+            168,
+            483,
+            132,
+            511,
+            620,
+            226,
+            452
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        }
+      },
+      {
+        "id": "ret-03",
+        "query": "Backend developer dùng Golang",
+        "relevant_count": 27,
+        "keyword": {
+          "top10": [
+            514,
+            230,
+            200,
+            460,
+            179,
+            607,
+            594,
+            624,
+            153,
+            475
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "dense": {
+          "top10": [
+            514,
+            624,
+            200,
+            594,
+            179,
+            607,
+            223,
+            230,
+            460,
+            276
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            514,
+            200,
+            230,
+            624,
+            179,
+            594,
+            607,
+            460,
+            155,
+            223
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        }
+      },
+      {
+        "id": "ret-04",
+        "query": "Data analyst làm báo cáo Power BI",
+        "relevant_count": 28,
+        "keyword": {
+          "top10": [
+            79,
+            97,
+            65,
+            81,
+            83,
+            84,
+            92,
+            60,
+            86,
+            95
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "dense": {
+          "top10": [
+            83,
+            79,
+            65,
+            97,
+            92,
+            85,
+            81,
+            95,
+            63,
+            60
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            79,
+            83,
+            97,
+            65,
+            81,
+            92,
+            84,
+            60,
+            95,
+            86
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        }
+      },
+      {
+        "id": "ret-05",
+        "query": "Data engineer xây pipeline với Spark và Kafka",
+        "relevant_count": 20,
+        "keyword": {
+          "top10": [
+            58,
+            43,
+            55,
+            56,
+            49,
+            103,
+            72,
+            52,
+            53,
+            59
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "dense": {
+          "top10": [
+            58,
+            55,
+            59,
+            56,
+            48,
+            53,
+            49,
+            52,
+            54,
+            42
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            58,
+            55,
+            56,
+            49,
+            59,
+            53,
+            43,
+            52,
+            48,
+            103
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        }
+      },
+      {
+        "id": "ret-06",
+        "query": "DevOps engineer dùng Kubernetes và Terraform",
+        "relevant_count": 44,
+        "keyword": {
+          "top10": [
+            786,
+            501,
+            692,
+            637,
+            578,
+            524,
+            569,
+            22,
+            498,
+            508
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "dense": {
+          "top10": [
+            350,
+            786,
+            578,
+            798,
+            692,
+            176,
+            163,
+            569,
+            689,
+            637
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            786,
+            578,
+            692,
+            350,
+            637,
+            569,
+            798,
+            22,
+            498,
+            690
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        }
+      },
+      {
+        "id": "ret-07",
+        "query": "Lập trình viên iOS Swift",
+        "relevant_count": 17,
+        "keyword": {
+          "top10": [
+            164,
+            326,
+            492,
+            196,
+            131,
+            193,
+            432,
+            257,
+            600,
+            573
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "dense": {
+          "top10": [
+            164,
+            573,
+            326,
+            600,
+            544,
+            432,
+            131,
+            492,
+            193,
+            196
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            164,
+            326,
+            492,
+            573,
+            131,
+            600,
+            432,
+            196,
+            193,
+            544
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        }
+      },
+      {
+        "id": "ret-08",
+        "query": "Android developer Kotlin",
+        "relevant_count": 31,
+        "keyword": {
+          "top10": [
+            419,
+            715,
+            257,
+            422,
+            421,
+            619,
+            196,
+            336,
+            193,
+            492
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "dense": {
+          "top10": [
+            257,
+            619,
+            419,
+            319,
+            421,
+            336,
+            422,
+            487,
+            193,
+            196
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            257,
+            419,
+            619,
+            421,
+            422,
+            715,
+            336,
+            196,
+            193,
+            487
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        }
+      },
+      {
+        "id": "ret-09",
+        "query": "Tester kiểm thử tự động automation test Selenium",
+        "relevant_count": 73,
+        "keyword": {
+          "top10": [
+            846,
+            505,
+            815,
+            872,
+            545,
+            127,
+            850,
+            836,
+            834,
+            855
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "dense": {
+          "top10": [
+            846,
+            172,
+            505,
+            834,
+            871,
+            872,
+            851,
+            545,
+            127,
+            836
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            846,
+            505,
+            872,
+            834,
+            545,
+            127,
+            172,
+            871,
+            836,
+            851
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        }
+      },
+      {
+        "id": "ret-10",
+        "query": "Kỹ sư NLP / LLM xây chatbot",
+        "relevant_count": 13,
+        "keyword": {
+          "top10": [
+            29,
+            9,
+            2,
+            451,
+            11,
+            37,
+            17,
+            27,
+            15,
+            32
+          ],
+          "precision_at_5": 0.8,
+          "mrr_at_10": 1.0
+        },
+        "dense": {
+          "top10": [
+            27,
+            2,
+            37,
+            17,
+            108,
+            11,
+            31,
+            29,
+            25,
+            451
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            2,
+            27,
+            29,
+            37,
+            17,
+            11,
+            9,
+            451,
+            31,
+            25
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        }
+      }
+    ]
+  },
+  "retrieval_paraphrase": {
+    "keyword": {
+      "precision_at_5": 0.34,
+      "mrr_at_10": 0.427,
+      "median_latency_ms": 241.5
+    },
+    "dense": {
+      "precision_at_5": 0.88,
+      "mrr_at_10": 1.0,
+      "median_latency_ms": 402.8
+    },
+    "hybrid": {
+      "precision_at_5": 0.72,
+      "mrr_at_10": 1.0,
+      "median_latency_ms": 273.6
+    },
+    "cases": [
+      {
+        "id": "par-01",
+        "query": "xây dựng mô hình để máy tự học từ dữ liệu bằng mạng nơ-ron",
+        "relevant_count": 67,
+        "keyword": {
+          "top10": [
+            69,
+            451,
+            67,
+            68,
+            18,
+            45,
+            17,
+            83,
+            11,
+            111
+          ],
+          "precision_at_5": 0.2,
+          "mrr_at_10": 0.2
+        },
+        "dense": {
+          "top10": [
+            17,
+            90,
+            18,
+            126,
+            113,
+            11,
+            87,
+            118,
+            2,
+            114
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            17,
+            18,
+            67,
+            11,
+            68,
+            69,
+            90,
+            2,
+            39,
+            111
+          ],
+          "precision_at_5": 0.6,
+          "mrr_at_10": 1.0
+        }
+      },
+      {
+        "id": "par-02",
+        "query": "viết một lần chạy được cả trên iPhone lẫn điện thoại Android, ứng dụng di động đa nền tảng",
+        "relevant_count": 30,
+        "keyword": {
+          "top10": [
+            619,
+            478,
+            728,
+            565,
+            448,
+            567,
+            730,
+            511,
+            596,
+            421
+          ],
+          "precision_at_5": 0.4,
+          "mrr_at_10": 0.25
+        },
+        "dense": {
+          "top10": [
+            492,
+            131,
+            226,
+            196,
+            193,
+            504,
+            289,
+            257,
+            718,
+            747
+          ],
+          "precision_at_5": 0.6,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            131,
+            196,
+            257,
+            504,
+            596,
+            421,
+            193,
+            448,
+            511,
+            492
+          ],
+          "precision_at_5": 0.4,
+          "mrr_at_10": 1.0
+        }
+      },
+      {
+        "id": "par-03",
+        "query": "phát triển dịch vụ phía server bằng ngôn ngữ do Google tạo ra, hiệu năng cao, xử lý đồng thời",
+        "relevant_count": 27,
+        "keyword": {
+          "top10": [
+            522,
+            241,
+            536,
+            480,
+            76,
+            925,
+            503,
+            635,
+            371,
+            172
+          ],
+          "precision_at_5": 0.0,
+          "mrr_at_10": 0.0
+        },
+        "dense": {
+          "top10": [
+            153,
+            624,
+            594,
+            457,
+            200,
+            179,
+            223,
+            514,
+            279,
+            460
+          ],
+          "precision_at_5": 0.8,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            153,
+            731,
+            522,
+            241,
+            624,
+            536,
+            594,
+            457,
+            480,
+            76
+          ],
+          "precision_at_5": 0.6,
+          "mrr_at_10": 1.0
+        }
+      },
+      {
+        "id": "par-04",
+        "query": "làm dashboard trực quan hoá số liệu kinh doanh cho ban giám đốc",
+        "relevant_count": 28,
+        "keyword": {
+          "top10": [
+            333,
+            134,
+            35,
+            142,
+            84,
+            924,
+            63,
+            83,
+            73,
+            88
+          ],
+          "precision_at_5": 0.2,
+          "mrr_at_10": 0.2
+        },
+        "dense": {
+          "top10": [
+            63,
+            65,
+            64,
+            98,
+            86,
+            95,
+            83,
+            106,
+            94,
+            60
+          ],
+          "precision_at_5": 0.8,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            63,
+            83,
+            98,
+            84,
+            178,
+            91,
+            413,
+            333,
+            65,
+            134
+          ],
+          "precision_at_5": 0.6,
+          "mrr_at_10": 1.0
+        }
+      },
+      {
+        "id": "par-05",
+        "query": "xây dựng luồng xử lý dữ liệu lớn theo lô và theo thời gian thực",
+        "relevant_count": 20,
+        "keyword": {
+          "top10": [
+            49,
+            59,
+            124,
+            48,
+            52,
+            53,
+            155,
+            18,
+            41,
+            394
+          ],
+          "precision_at_5": 0.8,
+          "mrr_at_10": 1.0
+        },
+        "dense": {
+          "top10": [
+            49,
+            59,
+            58,
+            103,
+            93,
+            48,
+            54,
+            56,
+            41,
+            53
+          ],
+          "precision_at_5": 0.8,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            49,
+            59,
+            48,
+            103,
+            53,
+            124,
+            41,
+            52,
+            155,
+            58
+          ],
+          "precision_at_5": 0.8,
+          "mrr_at_10": 1.0
+        }
+      },
+      {
+        "id": "par-06",
+        "query": "tự động hoá hạ tầng cloud bằng code và vận hành cụm container",
+        "relevant_count": 44,
+        "keyword": {
+          "top10": [
+            815,
+            103,
+            690,
+            343,
+            342,
+            88,
+            578,
+            561,
+            767,
+            569
+          ],
+          "precision_at_5": 0.4,
+          "mrr_at_10": 1.0
+        },
+        "dense": {
+          "top10": [
+            815,
+            350,
+            798,
+            163,
+            569,
+            578,
+            885,
+            22,
+            690,
+            176
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            815,
+            690,
+            578,
+            569,
+            22,
+            692,
+            561,
+            757,
+            806,
+            103
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        }
+      },
+      {
+        "id": "par-07",
+        "query": "phát triển ứng dụng cho iPhone và iPad của Apple",
+        "relevant_count": 17,
+        "keyword": {
+          "top10": [
+            924,
+            193,
+            341,
+            526,
+            747,
+            196,
+            468,
+            931,
+            493,
+            689
+          ],
+          "precision_at_5": 0.6,
+          "mrr_at_10": 0.5
+        },
+        "dense": {
+          "top10": [
+            573,
+            544,
+            600,
+            164,
+            326,
+            193,
+            196,
+            492,
+            131,
+            432
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            193,
+            196,
+            526,
+            747,
+            164,
+            492,
+            131,
+            573,
+            924,
+            544
+          ],
+          "precision_at_5": 0.8,
+          "mrr_at_10": 1.0
+        }
+      },
+      {
+        "id": "par-08",
+        "query": "lập trình ứng dụng cho điện thoại chạy hệ điều hành của Google",
+        "relevant_count": 31,
+        "keyword": {
+          "top10": [
+            301,
+            395,
+            933,
+            36,
+            435,
+            581,
+            88,
+            478,
+            329,
+            728
+          ],
+          "precision_at_5": 0.0,
+          "mrr_at_10": 0.125
+        },
+        "dense": {
+          "top10": [
+            730,
+            567,
+            421,
+            728,
+            478,
+            492,
+            131,
+            619,
+            422,
+            160
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            478,
+            728,
+            730,
+            567,
+            301,
+            395,
+            421,
+            933,
+            36,
+            435
+          ],
+          "precision_at_5": 0.8,
+          "mrr_at_10": 1.0
+        }
+      },
+      {
+        "id": "par-09",
+        "query": "đảm bảo chất lượng phần mềm, viết kịch bản kiểm tra chạy tự động trên trình duyệt",
+        "relevant_count": 73,
+        "keyword": {
+          "top10": [
+            855,
+            780,
+            864,
+            862,
+            850,
+            395,
+            743,
+            484,
+            856,
+            829
+          ],
+          "precision_at_5": 0.8,
+          "mrr_at_10": 1.0
+        },
+        "dense": {
+          "top10": [
+            172,
+            505,
+            846,
+            872,
+            545,
+            821,
+            841,
+            834,
+            828,
+            229
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            864,
+            846,
+            484,
+            850,
+            172,
+            855,
+            505,
+            780,
+            862,
+            872
+          ],
+          "precision_at_5": 1.0,
+          "mrr_at_10": 1.0
+        }
+      },
+      {
+        "id": "par-10",
+        "query": "dạy máy hiểu và sinh ngôn ngữ của con người, xây trợ lý hội thoại",
+        "relevant_count": 13,
+        "keyword": {
+          "top10": [
+            409,
+            154,
+            442,
+            864,
+            817,
+            3,
+            721,
+            538,
+            81,
+            623
+          ],
+          "precision_at_5": 0.0,
+          "mrr_at_10": 0.0
+        },
+        "dense": {
+          "top10": [
+            31,
+            17,
+            2,
+            37,
+            4,
+            5,
+            27,
+            25,
+            11,
+            29
+          ],
+          "precision_at_5": 0.8,
+          "mrr_at_10": 1.0
+        },
+        "hybrid": {
+          "top10": [
+            31,
+            2,
+            409,
+            17,
+            154,
+            442,
+            37,
+            864,
+            4,
+            817
+          ],
+          "precision_at_5": 0.6,
+          "mrr_at_10": 1.0
+        }
+      }
+    ]
+  }
+}
