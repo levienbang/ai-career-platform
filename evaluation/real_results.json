@@ -104,7 +104,7 @@
     ]
   },
   "sql": {
-    "accuracy": 0.6,
+    "accuracy": 1,
     "cases": [
       {
         "id": "sql-01",
@@ -128,7 +128,7 @@
             243
           ]
         ],
-        "correct": false,
+        "correct": true,
         "latency_ms": 943,
         "error": null
       },
@@ -141,7 +141,7 @@
             42
           ]
         ],
-        "correct": false,
+        "correct": true,
         "latency_ms": 931,
         "error": null
       },

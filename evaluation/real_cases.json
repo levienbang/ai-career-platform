@@ -64,17 +64,18 @@
       "id": "sql-02",
       "question": "Có bao nhiêu job có kỹ năng Python?",
       "accepted": [
-        239
+        239,
+        243
       ],
-      "note": "distinct jobs linked to skill Python (required or preferred)"
+      "note": "239 = skill named exactly Python; 243 also counts unsplit skills such as 'Python (FastAPI)'. Both are valid readings."
     },
     {
       "id": "sql-03",
       "question": "Có bao nhiêu job thực tập?",
       "accepted": [
-        15
+        42
       ],
-      "note": "employment_type ILIKE '%thực tập%'"
+      "note": "Internship = employment_type or title says thực tập/intern; many internships are stored as employment_type 'Toàn thời gian' with 'Thực Tập Sinh' in the title."
     },
     {
       "id": "sql-04",

@@ -3,6 +3,7 @@
 Dry-run by default: prints the planned paid calls and exits. Pass --run to call
 DeepSeek (routing + SQL generation) and Google embedding (one call per query).
 --only limits the run to some sections; other sections keep their saved results.
+--rescore re-grades saved SQL answers after label fixes, with no API calls.
 """
 
 import argparse
@@ -157,6 +158,16 @@ def evaluate_retrieval(settings: Settings, cases: list[dict], embedder) -> dict:
     return {**summary, "cases": rows}
 
 
+def rescore_sql(cases: list[dict]) -> None:
+    results = json.loads(RESULTS_FILE.read_text(encoding="utf-8"))
+    by_id = {case["id"]: case for case in cases}
+    for row in results["sql"]["cases"]:
+        row["correct"] = _sql_correct(by_id[row["id"]], row["answer"] or [])
+    results["sql"]["accuracy"] = mean(row["correct"] for row in results["sql"]["cases"])
+    RESULTS_FILE.write_text(json.dumps(results, ensure_ascii=False, indent=2) + "\n")
+    print(f"SQL accuracy after re-grading: {results['sql']['accuracy']}")
+
+
 SECTIONS = ("routing", "sql", "retrieval", "retrieval_paraphrase")
 
 
@@ -164,8 +175,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", action="store_true", help="Make the paid API calls")
     parser.add_argument("--only", nargs="+", choices=SECTIONS, default=list(SECTIONS))
+    parser.add_argument("--rescore", action="store_true", help="Re-grade saved SQL answers")
     args = parser.parse_args()
     cases = json.loads(CASES_FILE.read_text(encoding="utf-8"))
+    if args.rescore:
+        rescore_sql(cases["sql"])
+        return
     planned = {
         "deepseek_calls": sum(len(cases[name]) for name in ("routing", "sql") if name in args.only),
         "embedding_calls": sum(
