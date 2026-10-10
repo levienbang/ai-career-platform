@@ -10,7 +10,7 @@ from app.ingestion.extractor import ExtractorConfigurationError, LangChainJobExt
 from app.llm import ChatModelConfigurationError, build_structured_chat_model
 from app.retrieval.reranker import LangChainJobReranker, RerankerConfigurationError, RerankOutput
 from app.schemas.cv import CVExtraction
-from app.schemas.ingestion import JobBatchExtraction, JobExtraction
+from app.schemas.ingestion import JobBatchExtraction, JobExtraction, JobModelOutput
 from app.tools.sql_tool import LangChainSQLGenerator, SQLPlan, SQLToolConfigurationError
 
 
@@ -40,7 +40,7 @@ def chat_models(monkeypatch):
 
 
 COMPONENTS = [
-    (LangChainJobExtractor, JobExtraction, ExtractorConfigurationError),
+    (LangChainJobExtractor, JobModelOutput, ExtractorConfigurationError),
     (LangChainCVExtractor, CVExtraction, CVExtractorError),
     (LangChainQuestionRouter, RouteDecision, AgentRouterConfigurationError),
     (LangChainSQLGenerator, SQLPlan, SQLToolConfigurationError),

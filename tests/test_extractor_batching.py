@@ -185,3 +185,12 @@ def test_provider_parsing_error_recovers_good_indices(extractor_factory):
     result = extractor.extract_many(records(3))
     assert [r.title if r else None for r in result] == ["Job 0", None, "Job 2"]
     assert len(calls) == 1
+
+
+def test_batch_description_comes_from_records_not_model(extractor_factory):
+    extractor, _ = extractor_factory(
+        {"items": [item(1, description="cut…"), item(2, required_skills=["SQL"])]}
+    )
+    result = extractor.extract_many(records(2))
+    assert [r.description for r in result] == ["Python work 0", "Python work 1"]
+    assert result[1].required_skills == ["SQL"]

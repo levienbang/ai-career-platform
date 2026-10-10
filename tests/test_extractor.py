@@ -13,7 +13,7 @@ class RetryModel:
     def invoke(self, _messages):
         self.calls += 1
         if self.calls == 1:
-            return {"title": "missing required fields"}
+            return {"required_skills": ["Python"]}  # no title: invalid
         return {
             "title": "AI Engineer",
             "company": "Example",
@@ -56,3 +56,30 @@ def test_extractor_retries_invalid_structured_output_without_network(monkeypatch
 
     assert result.title == "AI Engineer"
     assert retry_model.calls == 2
+
+
+class EchoingModel:
+    """Returns a shortened description, as a model might when output is long."""
+
+    def invoke(self, _messages):
+        return {
+            "title": "Model title",
+            "required_skills": ["Python"],
+            "description": "truncated…",
+        }
+
+
+def test_description_always_comes_from_the_record(monkeypatch) -> None:
+    settings = Settings(deepseek_api_key="test-key", _env_file=None)
+    monkeypatch.setattr(
+        "app.ingestion.extractor.build_structured_chat_model",
+        lambda *_args, **_kwargs: type(
+            "Selected", (), {"provider": "deepseek", "runnable": EchoingModel()}
+        )(),
+    )
+    extractor = LangChainJobExtractor(settings)
+    original = "We build ML systems in Python. " * 200
+    result = extractor.extract(RawJobRecord(title="ML Engineer", description=original))
+    assert result.description == original.strip()
+    assert result.title == "ML Engineer"
+    assert result.required_skills == ["Python"]

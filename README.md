@@ -242,6 +242,12 @@ list literals or comma, semicolon and newline delimiters. Skill evidence include
 the source title, description and original technical-skills field. Location,
 employment type and experience are preserved or parsed from source fields.
 
+The model never returns the description: it outputs title, skills, experience and
+optional fields, and the import keeps the description (and title, company,
+location, employment type, source URL) from the input record. This keeps answers
+short, avoids truncated JSON on long postings, and guarantees the stored text is
+the source text.
+
 `LLM_BATCH_SIZE` defaults to 8 (1–25). `LLM_REQUESTS_PER_MINUTE` defaults to 0
 (unlimited); a positive value up to 1000 spaces request starts by `60 / RPM`
 seconds, including retries and split batches. The limiter is shared within an

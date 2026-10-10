@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
 
 def _clean_skill_values(value: Any) -> list[str]:
@@ -38,7 +38,7 @@ class RawJobRecord(BaseModel):
     source_url: HttpUrl | None = None
 
 
-class JobExtraction(BaseModel):
+class _JobFields(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     title: str = Field(min_length=1)
@@ -48,7 +48,6 @@ class JobExtraction(BaseModel):
     experience_years_min: int | None = Field(default=None, ge=0)
     required_skills: list[str] = Field(default_factory=list)
     preferred_skills: list[str] = Field(default_factory=list)
-    description: str = Field(min_length=1)
     source_url: HttpUrl | None = None
 
     @field_validator("company", mode="before")
@@ -64,7 +63,23 @@ class JobExtraction(BaseModel):
     )
 
 
-class JobBatchItem(JobExtraction):
+class JobExtraction(_JobFields):
+    description: str = Field(min_length=1)
+
+
+class JobModelOutput(_JobFields):
+    """What the LLM returns. The description is taken from the input record,
+    so the model never has to repeat (and possibly truncate) long text."""
+
+    @model_validator(mode="before")
+    @classmethod
+    def drop_echoed_description(cls, value: Any) -> Any:
+        if isinstance(value, dict) and "description" in value:
+            value = {key: item for key, item in value.items() if key != "description"}
+        return value
+
+
+class JobBatchItem(JobModelOutput):
     record_index: int = Field(ge=1)
 
 
