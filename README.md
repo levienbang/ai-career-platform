@@ -14,7 +14,7 @@ questions in natural language with safe SQL, and scores a CV against every job.
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)
 
 > Jobs arrive from a separate data-engineering pipeline:
-> **[data-ingestion-preprocessing](https://github.com/levienbang/data-ingestion-preprocessing)**
+> **[Job-Data-Engineering-Pipeline](https://github.com/levienbang/Job-Data-Engineering-Pipeline)**
 > (VietJobs dataset + Arbeitnow API → Bronze/Silver/Gold → this platform).
 
 ![Streamlit answers an internship job count question with a result table and generated SQL](docs/images/chat-sql.png)
@@ -167,7 +167,7 @@ cd demo && uv run streamlit run app.py    # chat UI → http://localhost:8501
 ```
 
 API docs: <http://localhost:8000/docs>. Real jobs come from the
-[pipeline repo](https://github.com/levienbang/data-ingestion-preprocessing) via `POST /jobs/import`.
+[pipeline repo](https://github.com/levienbang/Job-Data-Engineering-Pipeline) via `POST /jobs/import`.
 
 <img src="docs/images/api-docs.png" width="700" alt="Swagger API documentation showing jobs, search, agent, CV, and system endpoints">
 
