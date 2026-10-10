@@ -187,9 +187,9 @@ demo/          Streamlit chat
 - Import is synchronous; at high volume it should move to a queue with background workers.
 - BM25 scores every job per query; a full-text index would be needed at scale.
 - Job expiry is not modelled yet; closed postings stay searchable.
-- Rate limits are in memory (one API process).
+- Rate limits are in memory (one API process); behind the demo they act as one global limit.
 
 ---
 
 **Deeper details** — settings, design decisions, milestone notes: [docs/REFERENCE.md](docs/REFERENCE.md) ·
-scripts: [scripts/README.md](scripts/README.md) · demo: [demo/README.md](demo/README.md)
+deploy: [docs/DEPLOY.md](docs/DEPLOY.md) · scripts: [scripts/README.md](scripts/README.md) · demo: [demo/README.md](demo/README.md)

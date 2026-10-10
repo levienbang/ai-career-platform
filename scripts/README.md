@@ -14,6 +14,7 @@ Run from the repository root with `python -m scripts.<name>` (or prefix with
 | `learn_skill_aliases.py` | Propose alias decisions for extracted skills, review saved JSON, then apply | DeepSeek even in dry-run; none with `--from FILE` | Dry-run for DB, writes proposal JSON; `--apply` writes decisions/aliases/merges | `SkillAliasLearner.propose` / `apply` |
 | `review_skill_decisions.py` | List or manually approve, keep, or revert learned decisions | None | Required subcommand: `list` reads; `approve`, `keep-new`, `revert` write immediately | `skill_review.approve_decision` / `keep_new_decision` / `revert_alias` |
 | `check_deepseek.py` | Check provider connectivity and structured output when troubleshooting | DeepSeek, one request | Live API check; no DB writes or dry-run | `llm.build_structured_chat_model`, `structured_output_guidance` |
+| `qdrant_snapshot.py` | Back up / restore job vectors (used by `deploy/backup.sh`, `deploy/restore.sh`) | None | `save` streams a snapshot to stdout; `restore` replaces the collection from stdin | Qdrant snapshot HTTP API |
 
 ## Thứ tự dựng từ DB trống
 

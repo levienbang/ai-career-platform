@@ -75,3 +75,16 @@ def test_limiter_window_and_daily_cap():
     assert limiter.check("c", per_minute=1, per_day=3) == 3600  # shared daily cap
     day[0] = "2026-10-11"
     assert limiter.check("c", per_minute=1, per_day=3) is None
+
+
+def test_production_refuses_to_start_without_guards():
+    with pytest.raises(ValueError, match="ADMIN_API_KEY.*PUBLIC_DAILY_LIMIT"):
+        Settings(_env_file=None, app_env="production")
+    settings = Settings(
+        _env_file=None,
+        app_env="production",
+        admin_api_key="secret",
+        public_rate_limit_per_minute=5,
+        public_daily_limit=200,
+    )
+    assert settings.app_env == "production"

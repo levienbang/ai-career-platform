@@ -23,6 +23,9 @@ from context import build_query
 DEFAULT_API = os.getenv("CAREER_API_URL", "http://localhost:8000")
 TIMEOUT = httpx.Timeout(180.0, connect=5.0)
 CHAT_DIR = Path(os.getenv("CAREER_CHAT_DIR", Path(__file__).parent / ".chats"))
+# Public deployment: visitors must not see each other's chats or point the server at
+# another URL, so history stays in the browser session and the API URL is fixed.
+PUBLIC = os.getenv("DEMO_PUBLIC", "").lower() in {"1", "true", "yes"}
 
 st.set_page_config(page_title="Career Chat", page_icon="💼", layout="wide")
 
@@ -213,6 +216,8 @@ def _chat_path(chat_id: str) -> Path:
 
 def list_chats() -> list[dict]:
     """Saved conversations, most recently updated first."""
+    if PUBLIC:
+        return []
     chats = []
     for path in CHAT_DIR.glob("*.json"):
         try:
@@ -224,7 +229,7 @@ def list_chats() -> list[dict]:
 
 def save_current_chat() -> None:
     messages = st.session_state.messages
-    if not messages:
+    if PUBLIC or not messages:
         return
     first = next((m["content"] for m in messages if m["role"] == "user"), "Cuộc trò chuyện")
     title = " ".join(first.replace("📎", "").split())[:40] or "Cuộc trò chuyện"
@@ -295,7 +300,8 @@ with st.sidebar:
 
     st.divider()
     with st.expander("Cài đặt"):
-        st.session_state.api_url = st.text_input("API URL", st.session_state.api_url)
+        if not PUBLIC:
+            st.session_state.api_url = st.text_input("API URL", st.session_state.api_url)
         limit = st.slider("Số job gợi ý từ CV", 1, 20, 10)
         gap_top = st.slider("Phân tích skill gap trên top N job", 1, 20, 5)
     _, ready_error = call_api("GET", "/ready")

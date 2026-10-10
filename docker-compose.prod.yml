@@ -1,0 +1,98 @@
+# Production stack for one small VPS. Only Caddy is reachable from the internet:
+#   https://$DOMAIN  -> Streamlit demo (password gate) -> API on the private network
+# The API is bound to 127.0.0.1 for the job pipeline on the same host and SSH tunnels;
+# PostgreSQL and Qdrant have no published ports at all.
+# Usage: set COMPOSE_FILE=docker-compose.prod.yml in .env, then `docker compose up -d --build`.
+
+x-restart: &restart
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+services:
+  postgres:
+    <<: *restart
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-career}
+      POSTGRES_USER: ${POSTGRES_USER:-career}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_READONLY_USER: ${POSTGRES_READONLY_USER:?set POSTGRES_READONLY_USER}
+      POSTGRES_READONLY_PASSWORD: ${POSTGRES_READONLY_PASSWORD:?set POSTGRES_READONLY_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  qdrant:
+    <<: *restart
+    image: qdrant/qdrant:v1.19.1
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "bash", "-c", "</dev/tcp/127.0.0.1/6333"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    <<: *restart
+    build: .
+    env_file: .env
+    environment:
+      APP_ENV: production
+      QDRANT_URL: http://qdrant:6333
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=5)"]
+      interval: 30s
+      timeout: 7s
+      retries: 5
+      start_period: 30s
+    # One worker: the paid-call limiter keeps its counters in process memory.
+    command: >-
+      sh -c "alembic upgrade head &&
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1"
+
+  demo:
+    <<: *restart
+    build: ./demo
+    environment:
+      CAREER_API_URL: http://api:8000
+      DEMO_PASSWORD: ${DEMO_PASSWORD:?set DEMO_PASSWORD}
+      DEMO_PUBLIC: "true"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  caddy:
+    <<: *restart
+    image: caddy:2-alpine
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN, e.g. career.example.com or <ip>.sslip.io}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - demo
+
+volumes:
+  postgres_data:
+  qdrant_data:
+  caddy_data:
+  caddy_config:
