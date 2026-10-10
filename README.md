@@ -17,6 +17,10 @@ questions in natural language with safe SQL, and scores a CV against every job.
 > **[data-ingestion-preprocessing](https://github.com/levienbang/data-ingestion-preprocessing)**
 > (VietJobs dataset + Arbeitnow API → Bronze/Silver/Gold → this platform).
 
+![Streamlit answers an internship job count question with a result table and generated SQL](docs/images/chat-sql.png)
+
+*Natural-language analytics with the result table and the SQL used to produce it.*
+
 ---
 
 ## What you can do
@@ -29,6 +33,14 @@ questions in natural language with safe SQL, and scores a CV against every job.
 | **Check a skill gap** | Compares your skills with the jobs you picked | Required skills you lack, ranked by demand |
 
 All of it is available through a FastAPI backend (`/docs`) and a **Streamlit chat demo**.
+
+![Paraphrased mobile development search returns Android jobs in Streamlit](docs/images/chat-search.png)
+
+*A question describing Google’s phone operating system returns Android jobs.*
+
+![Fictional CV job matches ranked by score with matched and missing required skills](docs/images/cv-match.png)
+
+*A fictional sample CV produces ranked jobs, match scores, and matched / missing skills.*
 
 ---
 
@@ -156,6 +168,8 @@ cd demo && uv run streamlit run app.py    # chat UI → http://localhost:8501
 
 API docs: <http://localhost:8000/docs>. Real jobs come from the
 [pipeline repo](https://github.com/levienbang/data-ingestion-preprocessing) via `POST /jobs/import`.
+
+<img src="docs/images/api-docs.png" width="700" alt="Swagger API documentation showing jobs, search, agent, CV, and system endpoints">
 
 ## Tech stack
 
