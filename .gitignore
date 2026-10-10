@@ -23,3 +23,12 @@ skill_learning_proposals.json
 
 # Database backups (deploy/backup.sh)
 backups/
+
+# Local-only working notes for coding agents (kept on disk, not published)
+AGENTS.md
+.serena/
+.vscode/
+docs/PROJECT_SPEC.md
+docs/CURRENT_MILESTONE.md
+docs/PORTFOLIO_RELEASE.md
+docs/milestones/

@@ -27,5 +27,5 @@ Run from the repository root with `python -m scripts.<name>` (or prefix with
 For an isolated demo/evaluation DB, replace step 3 with
 `python -m scripts.load_demo_jobs`. This command also includes step 2. The corpus
 is `data/examples/demo_jobs.json`; the deterministic Milestone 7 evaluator needs
-exactly these 12 jobs. `python -m evaluation.evaluate_milestone7` uses offline
+exactly these 12 jobs. `python -m evaluation.evaluate_seed_corpus` uses offline
 provider fixtures, while the other live evaluators may call paid providers.
