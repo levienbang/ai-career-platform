@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     max_cv_pages: int = Field(default=5, ge=1, le=20)
     cv_match_candidates: int = Field(default=50, ge=1, le=200)
     cv_match_semantic_weight: float = Field(default=0.6, ge=0, le=1)
+    # Public deployment guards; unset/0 keeps local development open.
+    admin_api_key: str | None = None
+    public_rate_limit_per_minute: int = Field(default=0, ge=0, le=1000)
+    public_daily_limit: int = Field(default=0, ge=0, le=100_000)
     cv_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
     langsmith_tracing: bool = False
     langsmith_api_key: SecretStr | None = None

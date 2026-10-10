@@ -23,6 +23,21 @@ Swagger UI is available at <http://localhost:8000/docs>.
 503 if either dependency is unavailable; Compose uses `/ready` for the API
 healthcheck. Existing volumes are retained by normal `up --build` commands.
 
+## Public deployment guards
+
+All are off by default so local development is unchanged; set them before
+exposing the API or demo on the Internet.
+
+| Variable | Default | Effect |
+|---|---|---|
+| `ADMIN_API_KEY` | empty | When set, `POST /jobs/import` and `POST /search/index` require header `X-API-Key` (401 otherwise). Crawl sends it from `AI_PLATFORM_API_KEY`. |
+| `PUBLIC_RATE_LIMIT_PER_MINUTE` | 0 | Per-client limit for routes that spend DeepSeek or embedding calls: `/agent/query`, `/analytics/query`, `/cv/upload`, `/cv/match`, `/search/semantic`, `/search/hybrid`, `/search/reranked` (429 + `Retry-After`). |
+| `PUBLIC_DAILY_LIMIT` | 0 | Shared daily cap across all clients for the same routes. |
+| `DEMO_PASSWORD` (Streamlit) | empty | Password gate before the chat opens. |
+
+Limits are in memory for one API process. Behind a reverse proxy, run uvicorn
+with `--proxy-headers` so the client address is the real visitor, not the proxy.
+
 ## Architecture
 
 ```mermaid

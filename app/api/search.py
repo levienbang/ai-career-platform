@@ -40,6 +40,7 @@ from app.schemas.search import (
     SearchResponse,
     SearchResult,
 )
+from app.security import AdminKey, PaidCallLimit
 
 router = APIRouter(prefix="/search", tags=["search"])
 DbSession = Annotated[Session, Depends(get_db)]
@@ -126,7 +127,7 @@ def keyword_search(request: SearchRequest, db: DbSession) -> SearchResponse:
     return _response("keyword", request, hits, started_at)
 
 
-@router.post("/semantic", response_model=SearchResponse)
+@router.post("/semantic", response_model=SearchResponse, dependencies=[PaidCallLimit])
 def dense_search(
     request: SearchRequest,
     embedder: EmbeddingDependency,
@@ -143,7 +144,7 @@ def dense_search(
     return _response("dense", request, hits, started_at)
 
 
-@router.post("/hybrid", response_model=SearchResponse)
+@router.post("/hybrid", response_model=SearchResponse, dependencies=[PaidCallLimit])
 def hybrid_search(
     request: SearchRequest,
     db: DbSession,
@@ -161,7 +162,7 @@ def hybrid_search(
     return _response("hybrid", request, hits, started_at)
 
 
-@router.post("/reranked", response_model=SearchResponse)
+@router.post("/reranked", response_model=SearchResponse, dependencies=[PaidCallLimit])
 def reranked_search(
     request: SearchRequest,
     db: DbSession,
@@ -180,7 +181,7 @@ def reranked_search(
     return _response("reranked", request, hits, started_at)
 
 
-@router.post("/index", response_model=IndexResponse)
+@router.post("/index", response_model=IndexResponse, dependencies=[AdminKey])
 def index_jobs(
     request: IndexRequest,
     db: DbSession,

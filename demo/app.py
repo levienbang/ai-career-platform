@@ -8,6 +8,7 @@ Conversations (messages and API results, never the PDF bytes) are saved as JSON
 files in demo/.chats so they survive a page reload.
 """
 
+import hmac
 import json
 import os
 import uuid
@@ -24,6 +25,24 @@ TIMEOUT = httpx.Timeout(180.0, connect=5.0)
 CHAT_DIR = Path(os.getenv("CAREER_CHAT_DIR", Path(__file__).parent / ".chats"))
 
 st.set_page_config(page_title="Career Chat", page_icon="💼", layout="wide")
+
+
+def require_password() -> None:
+    """Gate a public demo: every chat or CV spends paid DeepSeek/embedding calls."""
+    expected = os.getenv("DEMO_PASSWORD")
+    if not expected or st.session_state.get("authenticated"):
+        return
+    st.title("💼 Career Chat")
+    password = st.text_input("Mật khẩu demo", type="password")
+    if password and hmac.compare_digest(password, expected):
+        st.session_state.authenticated = True
+        st.rerun()
+    if password:
+        st.error("Sai mật khẩu.")
+    st.stop()
+
+
+require_password()
 
 
 # --------------------------------------------------------------------------- API

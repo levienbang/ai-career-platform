@@ -16,6 +16,7 @@ from app.ingestion.pipeline import JobIngestionPipeline
 from app.jobs import JobNotFoundError, get_job, list_jobs
 from app.schemas.ingestion import ImportResult
 from app.schemas.jobs import JobResponse
+from app.security import AdminKey
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 DbSession = Annotated[Session, Depends(get_db)]
@@ -35,7 +36,7 @@ def get_job_extractor(
 JobExtractor = Annotated[StructuredJobExtractor, Depends(get_job_extractor)]
 
 
-@router.post("/import", response_model=ImportResult)
+@router.post("/import", response_model=ImportResult, dependencies=[AdminKey])
 async def import_jobs(
     db: DbSession,
     extractor: JobExtractor,

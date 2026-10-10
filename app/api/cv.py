@@ -21,6 +21,7 @@ from app.retrieval.dense import DenseSearchService
 from app.retrieval.embeddings import EmbeddingProvider, EmbeddingServiceError
 from app.retrieval.qdrant import SearchIndexNotReadyError, VectorStoreUnavailableError
 from app.schemas.cv import CVGapReport, CVMatchReport
+from app.security import PaidCallLimit
 from app.tools.cv_tool import CVSkillGapTool
 
 router = APIRouter(prefix="/cv", tags=["cv"])
@@ -54,7 +55,7 @@ def get_cv_match_service(
         raise HTTPException(status_code=503, detail=str(error)) from error
 
 
-@router.post("/upload", response_model=CVGapReport)
+@router.post("/upload", response_model=CVGapReport, dependencies=[PaidCallLimit])
 async def upload_cv(
     file: Annotated[UploadFile, File()],
     job_ids: Annotated[list[int], Form()],
@@ -91,7 +92,7 @@ async def upload_cv(
         raise HTTPException(status_code=503, detail=str(error)) from error
 
 
-@router.post("/match", response_model=CVMatchReport)
+@router.post("/match", response_model=CVMatchReport, dependencies=[PaidCallLimit])
 async def match_cv(
     file: Annotated[UploadFile, File()],
     settings: Annotated[Settings, Depends(get_settings)],

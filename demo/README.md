@@ -23,3 +23,6 @@ Mở <http://localhost:8501>.
 
 CV chỉ được gửi tới API cấu hình ở sidebar và giữ trong phiên trình duyệt; không lưu
 xuống đĩa.
+
+Public deployment: set `DEMO_PASSWORD` to require a password before the chat
+opens (every question or CV spends paid API calls). Unset keeps local use open.

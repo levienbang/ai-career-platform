@@ -10,3 +10,4 @@
 - Hybrid retrieval fuses independent BM25 and dense ranks with RRF; do not add raw BM25/cosine scores because scales differ.
 - Reranker must return every bounded candidate ID exactly once; unknown, missing, or duplicate IDs are errors, and provider/config/timeout failures are not silently downgraded.
 - Any future LLM-generated SQL is untrusted: parse/validate one read-only SELECT or WITH…SELECT, enforce table/column allowlists, database read-only permissions, row limits, and statement timeouts; keyword matching alone is insufficient.
+- Public guards (off unless configured): `ADMIN_API_KEY` protects import/index via `X-API-Key` (hmac compare); `PUBLIC_RATE_LIMIT_PER_MINUTE` per client and `PUBLIC_DAILY_LIMIT` shared cap protect routes that spend paid calls (in-memory, single process); Streamlit `DEMO_PASSWORD` gate. Keyword search and job reads stay open.

@@ -15,6 +15,7 @@ from app.graph.router import (
     build_question_router,
 )
 from app.schemas.agent import AgentResponse, AnalyticsResponse, NaturalLanguageQuery
+from app.security import PaidCallLimit
 from app.tools.sql_tool import (
     SQLAnalyticsTool,
     SQLExecutionError,
@@ -69,7 +70,7 @@ def get_career_agent(
     return build_career_agent(db, settings, question_router)
 
 
-@router.post("/analytics/query", response_model=AnalyticsResponse)
+@router.post("/analytics/query", response_model=AnalyticsResponse, dependencies=[PaidCallLimit])
 def analytics_query(
     request: NaturalLanguageQuery,
     sql_tool: Annotated[SQLAnalyticsTool, Depends(get_sql_analytics_tool)],
@@ -86,7 +87,7 @@ def analytics_query(
     )
 
 
-@router.post("/agent/query", response_model=AgentResponse)
+@router.post("/agent/query", response_model=AgentResponse, dependencies=[PaidCallLimit])
 def agent_query(
     request: NaturalLanguageQuery,
     agent: Annotated[CareerAgent, Depends(get_career_agent)],
