@@ -35,6 +35,14 @@ that milestone only. Do not modify the Crawl repository (`../Crawl`).
 - Report commands that could not be executed and explain why.
 
 
+## Git workflow
+
+- Never commit or push to `main`. Create a branch per milestone or change
+  (for example `feat/arbeitnow-source`, `fix/watermark`, `chore/ci`).
+- Push the branch and open a pull request into `main`; CI must pass. The user
+  reviews and merges every pull request manually.
+- After a merge, start new work from an updated `main`.
+
 ## Serena usage
 
 Serena is available for semantic code navigation and project memory.
