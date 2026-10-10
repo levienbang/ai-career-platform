@@ -35,6 +35,14 @@ that milestone only. Do not modify the Crawl repository (`../Crawl`).
 - Report commands that could not be executed and explain why.
 
 
+## Git workflow
+
+- Never commit or push to `main`. All work goes on the shared `dev` branch.
+- Push `dev` and open (or update) a pull request from `dev` into `main`; CI
+  must pass. The user reviews and merges every pull request manually.
+- Merge with a merge commit (not squash) so `dev` stays in line with `main`;
+  if `main` moved, merge `main` into `dev` before continuing.
+
 ## Serena usage
 
 Serena is available for semantic code navigation and project memory.
