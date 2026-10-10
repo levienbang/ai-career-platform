@@ -1,6 +1,6 @@
 {
   "mode": "deterministic-fakes-no-llm",
-  "ground_truth_file": "milestone7_cases.json",
+  "ground_truth_file": "seed_cases.json",
   "case_counts": {
     "retrieval": 12,
     "routing": 12,

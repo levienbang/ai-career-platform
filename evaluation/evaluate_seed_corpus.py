@@ -34,10 +34,10 @@ from evaluation.evaluate_agent import percentile, required_tools_succeeded
 from evaluation.evaluate_retrieval import mrr_at_k, recall_at_k
 
 ROOT = Path(__file__).parent
-CASES_FILE = ROOT / "milestone7_cases.json"
+CASES_FILE = ROOT / "seed_cases.json"
 RETRIEVAL_CASES_FILE = ROOT / "retrieval_cases.json"
 AGENT_CASES_FILE = ROOT / "agent_cases.json"
-RESULTS_FILE = ROOT / "milestone7_results.json"
+RESULTS_FILE = ROOT / "seed_results.json"
 
 
 def validate_seed_corpus(source_urls: list[str | None]) -> None:

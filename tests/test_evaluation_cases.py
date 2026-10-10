@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from evaluation.evaluate_milestone7 import (
+from evaluation.evaluate_seed_corpus import (
     FixtureEmbeddingProvider,
     FixtureRouter,
     validate_seed_corpus,
@@ -13,7 +13,7 @@ ROOT = Path(__file__).parents[1]
 
 
 def test_ground_truth_manifest_has_39_prelabelled_cases():
-    manifest = json.loads((ROOT / "evaluation/milestone7_cases.json").read_text())
+    manifest = json.loads((ROOT / "evaluation/seed_cases.json").read_text())
     retrieval = json.loads((ROOT / "evaluation/retrieval_cases.json").read_text())
     routing = json.loads((ROOT / "evaluation/agent_cases.json").read_text())
     assert [
@@ -29,7 +29,7 @@ def test_ground_truth_manifest_has_39_prelabelled_cases():
 
 
 def test_sql_ground_truth_matches_seed_fixture():
-    manifest = json.loads((ROOT / "evaluation/milestone7_cases.json").read_text())
+    manifest = json.loads((ROOT / "evaluation/seed_cases.json").read_text())
     seed = json.loads((ROOT / "data/examples/demo_jobs.json").read_text())
     jobs = [
         job for job in seed["jobs"] if job["source_url"].startswith("https://example.com/eval/")

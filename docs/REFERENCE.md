@@ -463,10 +463,10 @@ docker compose exec api python -m evaluation.evaluate_routing
 This sends only the 12 labelled question strings to the configured agent model and
 writes `evaluation/routing_results.json`.
 
-## Milestone 7 evaluation
+## Seed-corpus evaluation
 
 `evaluation/retrieval_cases.json` and `evaluation/agent_cases.json` retain their
-original 12 labels each. `evaluation/milestone7_cases.json` adds 5 SQL, 5 CV, and
+original 12 labels each. `evaluation/seed_cases.json` adds 5 SQL, 5 CV, and
 5 error/unanswerable cases, for 39 cases total. Labels were assigned from
 `data/examples/demo_jobs.json` before measuring results. SQL counts are scoped to its ten
 `/eval/` jobs; CV fixtures contain synthetic skill text only.
@@ -476,10 +476,10 @@ Run the deterministic suite in a fresh, isolated database containing only the
 change retrieval rankings and make the fixed labels incomparable:
 
 ```bash
-docker compose exec api python -m evaluation.evaluate_milestone7
+docker compose exec api python -m evaluation.evaluate_seed_corpus
 ```
 
-It writes `evaluation/milestone7_results.json` with Recall@5, MRR@10, P50/P95
+It writes `evaluation/seed_results.json` with Recall@5, MRR@10, P50/P95
 retrieval latency, routing intent/tool-selection accuracy and task success, SQL
 executable/exact-result/unsafe-query rejection rates, CV gap correctness, and
 overall P50/P95 latency and error rate. It uses an in-memory Qdrant collection,
@@ -547,10 +547,7 @@ quality metric is available because `EMBEDDING_API_KEY` is not configured. The
 saved `evaluation/retrieval_results.json` and `evaluation/routing_results.json`
 are earlier runs and were not reproduced in this audit. Remote LangSmith tracing
 and live CV extraction also remain unverified. A [sanitized local trace](../evaluation/agent_trace_example.json)
-records one complete fake-model search run on real PostgreSQL and Qdrant. See
-[the audit and release notes](PORTFOLIO_RELEASE.md)
-for the acceptance checklist, failure analysis, demo steps, and accurate GitHub/CV
-description.
+records one complete fake-model search run on real PostgreSQL and Qdrant.
 
 ## Skill maintenance (Milestone 12)
 
@@ -581,7 +578,6 @@ terminal failure counts in `docker compose logs api`.
 
 The Dockerfile installs dependencies before copying application code, so changing
 `app/` reuses the dependency layer; the dev Compose override still uses `.[dev]`.
-See `docs/milestones/MILESTONE12_REPORT.md` for validation and measured build timings.
 
 
 ## Resumable indexing and skill learning (Milestone 13)
@@ -693,4 +689,3 @@ and other 4xx errors are not retried. When retries run out, the error states how
 many jobs were saved; rerun the command to resume. For a restrictive Google quota,
 start with batch size **10** and **1** request/minute and adjust to the actual token
 and daily limits. RPM spacing does not guarantee staying within token/day quotas.
-Read `docs/milestones/MILESTONE13_REPORT.md` for checks, Docker verification and limitations.

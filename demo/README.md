@@ -26,3 +26,6 @@ xuống đĩa.
 
 Public deployment: set `DEMO_PASSWORD` to require a password before the chat
 opens (every question or CV spends paid API calls). Unset keeps local use open.
+
+Public mode (`DEMO_PUBLIC=true`, set by `docker-compose.prod.yml`): chats stay in the
+browser session (no shared history on the server) and the API URL setting is hidden.

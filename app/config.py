@@ -2,7 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -84,6 +84,24 @@ class Settings(BaseSettings):
 
         HttpUrl(value)
         return value.strip()
+
+    @model_validator(mode="after")
+    def require_public_guards(self) -> "Settings":
+        """Refuse to start a production server that anyone could use to spend paid calls."""
+        if self.app_env != "production":
+            return self
+        missing = [
+            name
+            for name, value in (
+                ("ADMIN_API_KEY", self.admin_api_key),
+                ("PUBLIC_RATE_LIMIT_PER_MINUTE", self.public_rate_limit_per_minute),
+                ("PUBLIC_DAILY_LIMIT", self.public_daily_limit),
+            )
+            if not value
+        ]
+        if missing:
+            raise ValueError(f"APP_ENV=production requires {', '.join(missing)}")
+        return self
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
