@@ -35,30 +35,28 @@ class JobGap(BaseModel):
     fit_score: float = Field(ge=0, le=1)
 
 
-class CVGapReport(BaseModel):
-    profile: CVExtraction
-    recognized_skills: list[RecognizedSkill]
-    unrecognized_skills: list[str]
-    jobs: list[JobGap]
-    missing_required_skills: list[GapSkill]
-    missing_preferred_skills: list[GapSkill]
+class CVMatchedJob(JobGap):
+    """A job gap ranked by `final_score`, which blends semantic similarity and `fit_score`."""
 
-
-class CVMatchedJob(BaseModel):
-    job_id: int
-    title: str
     company: str | None
     location: str | None
     final_score: float
     semantic_score: float
-    skill_score: float = Field(ge=0, le=1)
-    matched_skills: list[str]
-    missing_required_skills: list[str]
-    missing_preferred_skills: list[str]
 
 
-class CVMatchReport(BaseModel):
+class CVSkillsReport(BaseModel):
     recognized_skills: list[RecognizedSkill]
     unrecognized_skills: list[str]
+
+
+class CVGapReport(CVSkillsReport):
+    profile: CVExtraction
+    jobs: list[JobGap]
+    # Most frequently missing first: what to learn next across the chosen jobs.
+    missing_required_skills: list[GapSkill]
+    missing_preferred_skills: list[GapSkill]
+
+
+class CVMatchReport(CVSkillsReport):
     query: str
     jobs: list[CVMatchedJob]

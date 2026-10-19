@@ -109,7 +109,7 @@ def test_import_learns_alias_reuses_it_and_cv_match(db_session, fake_extractor, 
         .invoke(b"%PDF-test", limit=1, max_pages=5)
         .jobs[0]
     )
-    assert match.matched_skills == ["Scikit-learn"] and match.skill_score == 1.0
+    assert match.matched_skills == ["Scikit-learn"] and match.fit_score == 1.0
     assert match.missing_required_skills == []
     from io import BytesIO
 
@@ -131,7 +131,7 @@ def test_import_learns_alias_reuses_it_and_cv_match(db_session, fake_extractor, 
     )
     assert response.status_code == 200
     assert response.json()["jobs"][0]["matched_skills"] == ["Scikit-learn"]
-    assert response.json()["jobs"][0]["skill_score"] == 1.0
+    assert response.json()["jobs"][0]["fit_score"] == 1.0
 
 
 @pytest.mark.parametrize("outcome", ["new", "low", "invalid", "blocked"])

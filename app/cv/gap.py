@@ -69,11 +69,13 @@ def analyze_skill_gap(
         jobs=gaps,
         missing_required_skills=[
             GapSkill(skill=name, frequency=count / len(jobs))
-            for name, count in sorted(required_counts.items())
+            for name, count in sorted(required_counts.items(), key=lambda item: (-item[1], item[0]))
         ],
         missing_preferred_skills=[
             GapSkill(skill=name, frequency=count / len(jobs))
-            for name, count in sorted(preferred_counts.items())
+            for name, count in sorted(
+                preferred_counts.items(), key=lambda item: (-item[1], item[0])
+            )
         ],
     )
 

@@ -75,6 +75,20 @@ def test_alias_evidence_unknown_and_weighted_gap(db_session, taxonomy):
     ]
 
 
+def test_missing_skills_are_ranked_by_frequency(db_session, taxonomy):
+    jobs = [
+        add_target_job(db_session, taxonomy, 1, ["FastAPI"], []),
+        add_target_job(db_session, taxonomy, 2, ["FastAPI"], []),
+        add_target_job(db_session, taxonomy, 3, ["Docker"], []),
+    ]
+    report = CVSkillGapTool(db_session, FakePDFLoader(), FakeCVExtractor()).invoke(
+        b"%PDF-fixture", [job.id for job in jobs], max_pages=5
+    )
+
+    # FastAPI is missing more often, so it outranks the alphabetically earlier Docker.
+    assert [item.skill for item in report.missing_required_skills] == ["FastAPI", "Docker"]
+
+
 def test_missing_cv_data_and_no_job_requirements(db_session, taxonomy):
     job = add_target_job(db_session, taxonomy, 3, [], [])
     report = analyze_skill_gap(db_session, CVExtraction(), "No skills listed", [job.id])

@@ -156,7 +156,7 @@ def render_cv_match(message: dict) -> None:
                 "#": rank,
                 "final": round(job["final_score"], 3),
                 "semantic": round(job["semantic_score"], 3),
-                "skill": round(job["skill_score"], 2),
+                "skill": round(job["fit_score"], 2),
                 "title": job["title"],
                 "location": job.get("location") or "—",
                 "khớp": ", ".join(job["matched_skills"]),
@@ -177,7 +177,7 @@ def render_cv_match(message: dict) -> None:
 def render_cv_gap(message: dict) -> None:
     data = message["data"]
     st.markdown(f"**Skill gap** của `{message['file_name']}` so với {len(data['jobs'])} job")
-    missing = sorted(data.get("missing_required_skills", []), key=lambda s: -s["frequency"])
+    missing = data.get("missing_required_skills", [])
     if missing:
         st.markdown("Skill **bắt buộc** còn thiếu (tỉ lệ job yêu cầu):")
         st.dataframe(
