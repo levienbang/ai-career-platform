@@ -11,11 +11,9 @@ from typing import Any
 
 from app.db.session import SessionLocal
 from app.skills.taxonomy import (
-    load_demo_jobs as persist_demo_jobs,
-)
-from app.skills.taxonomy import (
     load_skill_aliases,
     load_skill_blocklist,
+    persist_demo_jobs,
     seed_taxonomy,
 )
 

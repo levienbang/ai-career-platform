@@ -67,14 +67,14 @@ def test_limiter_window_and_daily_cap():
     now = [0.0]
     day = ["2026-10-10"]
     limiter = PaidCallLimiter(clock=lambda: now[0], today=lambda: day[0])
-    assert limiter.check("a", per_minute=1, per_day=3) is None
-    assert limiter.check("a", per_minute=1, per_day=3) == 60
-    assert limiter.check("b", per_minute=1, per_day=3) is None  # other client
+    assert limiter.check_and_record("a", per_minute=1, per_day=3) is None
+    assert limiter.check_and_record("a", per_minute=1, per_day=3) == 60
+    assert limiter.check_and_record("b", per_minute=1, per_day=3) is None  # other client
     now[0] = 61
-    assert limiter.check("a", per_minute=1, per_day=3) is None
-    assert limiter.check("c", per_minute=1, per_day=3) == 3600  # shared daily cap
+    assert limiter.check_and_record("a", per_minute=1, per_day=3) is None
+    assert limiter.check_and_record("c", per_minute=1, per_day=3) == 3600  # shared daily cap
     day[0] = "2026-10-11"
-    assert limiter.check("c", per_minute=1, per_day=3) is None
+    assert limiter.check_and_record("c", per_minute=1, per_day=3) is None
 
 
 def test_production_refuses_to_start_without_guards():

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.config import Settings
 from app.db.models import JobSkill, Skill, SkillAlias, SkillDecision
-from app.ingestion.normalizer import SkillNormalizer, skill_lookup_key, skill_match_key
+from app.ingestion.normalizer import SkillNormalizer, normalize_skill_text, skill_match_key
 from app.skills.learning import LearningProposal, SkillAliasLearner
 
 
@@ -45,7 +45,8 @@ def keep_new_decision(session: Session, name: str) -> None:
 def _mentions(text: str | None, name: str) -> bool:
     return bool(
         re.search(
-            rf"(?<!\w){re.escape(skill_lookup_key(name))}(?!\w)", skill_lookup_key(text or "")
+            rf"(?<!\w){re.escape(normalize_skill_text(name))}(?!\w)",
+            normalize_skill_text(text or ""),
         )
     )
 
@@ -82,9 +83,9 @@ def revert_alias(session: Session, name: str) -> int:
             )
         )
         remaining_evidence = re.sub(
-            rf"(?<!\w){re.escape(skill_lookup_key(alias.alias))}(?!\w)",
+            rf"(?<!\w){re.escape(normalize_skill_text(alias.alias))}(?!\w)",
             "",
-            skill_lookup_key(link.evidence_text or ""),
+            normalize_skill_text(link.evidence_text or ""),
         ).strip(" ;")
         canonical_names = [
             canonical.canonical_name,

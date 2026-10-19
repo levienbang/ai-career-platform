@@ -8,7 +8,7 @@ Run from the repository root with `python -m scripts.<name>` (or prefix with
 | Script | Purpose / when to run | Paid API calls | Default effects | Service called |
 |---|---|---|---|---|
 | `sync_skills.py` | Synchronize reviewed skills before imports or after taxonomy edits; safe on an existing DB | None | Writes skills/aliases and merges extracted synonyms; idempotent, no jobs | `skill_taxonomy.seed_taxonomy` |
-| `load_demo_jobs.py` | Load 12 jobs on an isolated demo/evaluation DB; do not mix with real Crawl data | None | Synchronizes skills, then writes demo jobs; idempotent, one transaction | `skill_taxonomy.seed_taxonomy`, `skill_taxonomy.load_demo_jobs` |
+| `load_demo_jobs.py` | Load 12 jobs on an isolated demo/evaluation DB; do not mix with real Crawl data | None | Synchronizes skills, then writes demo jobs; idempotent, one transaction | `taxonomy.seed_taxonomy`, `taxonomy.persist_demo_jobs` |
 | `index_jobs.py` | Index after imports or skill changes; `--full` embeds all jobs again | Google, except `--payload-only` | Writes Qdrant; skips unchanged jobs; payload mode only refreshes existing points | `QdrantJobIndex.index_all` / `refresh_payloads`, embedding provider |
 | `merge_skills.py` | Preview or apply known synonym merges | None | Dry-run; `--apply` writes merges | `skill_taxonomy.plan_skill_merges` / `apply_skill_merges` |
 | `learn_skill_aliases.py` | Propose alias decisions for extracted skills, review saved JSON, then apply | DeepSeek even in dry-run; none with `--from FILE` | Dry-run for DB, writes proposal JSON; `--apply` writes decisions/aliases/merges | `SkillAliasLearner.propose` / `apply` |

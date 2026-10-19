@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Job, JobSkill, RequirementType
 from app.db.repositories import JobRepository
-from app.ingestion.normalizer import SkillNormalizer, skill_lookup_key
+from app.ingestion.normalizer import SkillNormalizer, normalize_skill_text
 from app.schemas.cv import CVExtraction, CVGapReport, GapSkill, JobGap, RecognizedSkill
 
 
@@ -14,7 +14,7 @@ class TargetJobError(ValueError):
     pass
 
 
-def _job_gap(job: Job, available_ids: set[int]) -> JobGap:
+def compute_job_gap(job: Job, available_ids: set[int]) -> JobGap:
     required: set[int] = set()
     preferred: set[int] = set()
     names: dict[int, str] = {}
@@ -59,7 +59,7 @@ def analyze_skill_gap(
         raise TargetJobError(f"Target job not found: {min(missing_ids)}")
 
     recognized, unknown = recognize_cv_skills(session, profile, cv_text)
-    gaps = [_job_gap(job, set(recognized)) for job in jobs]
+    gaps = [compute_job_gap(job, set(recognized)) for job in jobs]
     required_counts = Counter(skill for gap in gaps for skill in gap.missing_required_skills)
     preferred_counts = Counter(skill for gap in gaps for skill in gap.missing_preferred_skills)
     return CVGapReport(
@@ -85,10 +85,10 @@ def recognize_cv_skills(
     recognized: dict[int, RecognizedSkill] = {}
     unknown: set[str] = set()
     market_skill_ids = set(session.scalars(select(JobSkill.skill_id).distinct()))
-    normalized_text = skill_lookup_key(cv_text)
+    normalized_text = normalize_skill_text(cv_text)
     for claim in profile.skills:
         evidence = claim.evidence.strip()
-        normalized_evidence = skill_lookup_key(evidence)
+        normalized_evidence = normalize_skill_text(evidence)
         if not re.search(rf"(?<!\w){re.escape(normalized_evidence)}(?!\w)", normalized_text):
             continue
         skill = normalizer.resolve(claim.name)

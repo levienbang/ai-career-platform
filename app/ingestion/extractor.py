@@ -136,7 +136,7 @@ def _record_payload(record: RawJobRecord) -> str:
     return json.dumps(payload, ensure_ascii=False)
 
 
-def _guard(output: JobModelOutput, record: RawJobRecord) -> JobExtraction:
+def _keep_source_facts(output: JobModelOutput, record: RawJobRecord) -> JobExtraction:
     """Keep source facts from the input; the model only adds skills and experience.
 
     The description always comes from the record, never from model output.
@@ -240,7 +240,7 @@ class LangChainJobExtractor:
                 invoking = False
                 if isinstance(result, BaseModel):
                     result = result.model_dump(mode="json")
-                return _guard(JobModelOutput.model_validate(result), record)
+                return _keep_source_facts(JobModelOutput.model_validate(result), record)
             except Exception as error:
                 _log_failure(error, [record], attempt, response_error=not invoking)
                 last_error = error
@@ -326,7 +326,7 @@ class LangChainJobExtractor:
                     output = JobModelOutput.model_validate(
                         item.model_dump(exclude={"record_index"})
                     )
-                    results[index] = _guard(output, records[index])
+                    results[index] = _keep_source_facts(output, records[index])
                 return results
             except Exception as error:
                 _log_failure(error, records, attempt, response_error=not invoking)

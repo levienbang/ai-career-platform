@@ -267,7 +267,9 @@ def seed_taxonomy(
     return {name: skills[name] for name in definitions}
 
 
-def load_demo_jobs(session: Session, jobs: list[dict[str, Any]], skills: dict[str, Skill]) -> None:
+def persist_demo_jobs(
+    session: Session, jobs: list[dict[str, Any]], skills: dict[str, Skill]
+) -> None:
     """Persist demo jobs idempotently; the caller synchronizes taxonomy first."""
     for item in jobs:
         content_hash = sha256(item["description"].encode()).hexdigest()
