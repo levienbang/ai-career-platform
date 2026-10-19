@@ -212,9 +212,7 @@ class JobIngestionPipeline:
                         if extracted.company is not None:
                             company = company_repository.get_by_name(extracted.company)
                             if company is None:
-                                company = company_repository.add(
-                                    Company(name=extracted.company, location=extracted.location)
-                                )
+                                company = company_repository.add(Company(name=extracted.company))
                                 self.session.flush()
 
                         job = Job(

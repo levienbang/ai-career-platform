@@ -90,9 +90,9 @@ def test_sql_validator_allows_left_join_for_jobs_without_company() -> None:
 def test_sql_validator_allows_read_only_cte_and_safe_date_function() -> None:
     sql = """
     WITH monthly AS (
-        SELECT DATE_TRUNC('month', posted_at) AS month, COUNT(*) AS count
+        SELECT DATE_TRUNC('month', ingested_at) AS month, COUNT(*) AS count
         FROM jobs
-        GROUP BY DATE_TRUNC('month', posted_at)
+        GROUP BY DATE_TRUNC('month', ingested_at)
     )
     SELECT month, count FROM monthly ORDER BY month
     """
@@ -105,6 +105,18 @@ def test_sql_validator_allows_read_only_cte_and_safe_date_function() -> None:
 def test_sql_validator_rejects_column_from_wrong_table() -> None:
     with pytest.raises(SQLValidationError):
         SQLSafetyValidator().validate("SELECT title FROM skills")
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "SELECT COUNT(*) AS count FROM jobs WHERE posted_at >= CURRENT_DATE",
+        "SELECT name FROM companies WHERE location = 'Ha Noi'",
+    ],
+)
+def test_sql_validator_rejects_unpopulated_columns(sql: str) -> None:
+    with pytest.raises(SQLValidationError):
+        SQLSafetyValidator().validate(sql)
 
 
 def test_sql_validator_rejects_ambiguous_column() -> None:

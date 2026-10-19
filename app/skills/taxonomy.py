@@ -277,7 +277,7 @@ def persist_demo_jobs(
             continue
         company = session.scalar(select(Company).where(Company.name == item["company"]))
         if company is None:
-            company = Company(name=item["company"], location=item["location"])
+            company = Company(name=item["company"])
             session.add(company)
             session.flush()
         job = Job(

@@ -100,7 +100,6 @@ def revert_alias(session: Session, name: str) -> int:
                         job_id=link.job_id,
                         skill_id=skill.id,
                         requirement_type=link.requirement_type,
-                        importance=link.importance,
                         evidence_text=alias.alias,
                     )
                 )
