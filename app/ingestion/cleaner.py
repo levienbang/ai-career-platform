@@ -12,9 +12,13 @@ FIELD_ALIASES = {
 }
 
 
+def normalize_text(value: str) -> str:
+    """NFKC-normalize and collapse every whitespace run to one space."""
+    return re.sub(r"\s+", " ", unicodedata.normalize("NFKC", value)).strip()
+
+
 def clean_text(value: str) -> str | None:
-    normalized = unicodedata.normalize("NFKC", value)
-    normalized = re.sub(r"\s+", " ", normalized).strip()
+    normalized = normalize_text(value)
     if normalized.casefold() in MISSING_VALUES:
         return None
     return normalized

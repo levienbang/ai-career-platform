@@ -1,5 +1,4 @@
 import re
-import unicodedata
 from dataclasses import dataclass
 
 from sqlalchemy import func, select
@@ -8,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import RequirementType, Skill
 from app.db.repositories import SkillRepository
+from app.ingestion.cleaner import normalize_text
 
 
 class UnknownSkillsError(ValueError):
@@ -24,8 +24,13 @@ class NormalizedJobSkill:
 
 
 def normalize_skill_text(value: str) -> str:
-    normalized = unicodedata.normalize("NFKC", value)
-    return re.sub(r"\s+", " ", normalized).strip().casefold()
+    return normalize_text(value).casefold()
+
+
+def mentions(text: str | None, phrase: str) -> bool:
+    """Whether phrase occurs in text as whole words, ignoring case and spacing differences."""
+    pattern = rf"(?<!\w){re.escape(normalize_skill_text(phrase))}(?!\w)"
+    return re.search(pattern, normalize_skill_text(text or "")) is not None
 
 
 def skill_match_key(value: str) -> str:
@@ -52,25 +57,19 @@ class SkillNormalizer:
         # A resolved spelling still needs literal, word-boundary evidence in the source.
         if name is not None and self.resolve(name) is skill:
             wordings.add(normalize_skill_text(name))
-        for wording in wordings:
-            if re.search(rf"(?<!\w){re.escape(wording)}(?!\w)", normalize_skill_text(evidence)):
-                return True
-        return False
+        return any(mentions(evidence, wording) for wording in wordings)
 
     def learnable_names(self, values: list[str], evidence_text: str) -> list[str]:
         """Only grounded, short names enter learning; retry undecided extracted skills."""
         names = []
         for value in values:
-            name = " ".join(unicodedata.normalize("NFKC", value).split())
+            name = normalize_text(value)
             skill = self.resolve(name)
             if skill is not None and skill.origin != "extracted":
                 continue
             if not name or len(name) > 50 or len(name.split()) > 5:
                 continue
-            if re.search(
-                rf"(?<!\w){re.escape(normalize_skill_text(name))}(?!\w)",
-                normalize_skill_text(evidence_text),
-            ):
+            if mentions(evidence_text, name):
                 names.append(name)
         return names
 
@@ -91,7 +90,7 @@ class SkillNormalizer:
             (RequirementType.PREFERRED, preferred_skills),
         ):
             for evidence in values:
-                name = " ".join(unicodedata.normalize("NFKC", evidence).split())
+                name = normalize_text(evidence)
                 if not name or len(name) > 100:
                     continue
                 key = normalize_skill_text(name)
@@ -102,9 +101,7 @@ class SkillNormalizer:
                 if skill is None:
                     if len(name.split()) > 5 or len(name) > 50:
                         continue
-                    if evidence_text is None or not re.search(
-                        rf"(?<!\w){re.escape(key)}(?!\w)", normalize_skill_text(evidence_text)
-                    ):
+                    if evidence_text is None or not mentions(evidence_text, key):
                         continue
                     if not create_missing:
                         if name not in unknown:

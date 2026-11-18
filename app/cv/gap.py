@@ -1,4 +1,3 @@
-import re
 from collections import Counter
 
 from sqlalchemy import select
@@ -6,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Job, JobSkill, RequirementType
 from app.db.repositories import JobRepository
-from app.ingestion.normalizer import SkillNormalizer, normalize_skill_text
+from app.ingestion.normalizer import SkillNormalizer, mentions
 from app.schemas.cv import CVExtraction, CVGapReport, GapSkill, JobGap, RecognizedSkill
 
 
@@ -87,11 +86,9 @@ def recognize_cv_skills(
     recognized: dict[int, RecognizedSkill] = {}
     unknown: set[str] = set()
     market_skill_ids = set(session.scalars(select(JobSkill.skill_id).distinct()))
-    normalized_text = normalize_skill_text(cv_text)
     for claim in profile.skills:
         evidence = claim.evidence.strip()
-        normalized_evidence = normalize_skill_text(evidence)
-        if not re.search(rf"(?<!\w){re.escape(normalized_evidence)}(?!\w)", normalized_text):
+        if not mentions(cv_text, evidence):
             continue
         skill = normalizer.resolve(claim.name)
         if skill is None or skill.id not in market_skill_ids:
