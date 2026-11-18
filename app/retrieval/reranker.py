@@ -1,7 +1,9 @@
 import json
+import logging
+import threading
 from dataclasses import replace
 from functools import lru_cache
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
@@ -15,6 +17,8 @@ from app.llm import (
 from app.retrieval.chunking import chunk_search_document
 from app.retrieval.hybrid import HybridSearchService
 from app.retrieval.types import SearchHit
+
+logger = logging.getLogger(__name__)
 
 
 class RerankerConfigurationError(RuntimeError):
@@ -215,9 +219,17 @@ class CrossEncoderJobReranker:
         return [replace(candidates[index], score=scores[index]) for index in ordered]
 
 
-@lru_cache(maxsize=2)
+_LOAD_LOCK = threading.Lock()
+
+
 def load_cross_encoder(model_name: str, max_length: int, device: str | None) -> Any:
-    """Load once per process; the model is ~2 GB, so per-request loading is not an option."""
+    """Load once per process; the lock stops a warm-up and a request loading it twice."""
+    with _LOAD_LOCK:
+        return _load_cross_encoder(model_name, max_length, device)
+
+
+@lru_cache(maxsize=2)
+def _load_cross_encoder(model_name: str, max_length: int, device: str | None) -> Any:
     try:
         from sentence_transformers import CrossEncoder
     except ImportError as error:
@@ -231,6 +243,55 @@ def load_cross_encoder(model_name: str, max_length: int, device: str | None) -> 
             f"Could not load reranker model '{model_name}'; "
             "run python -m scripts.download_reranker first"
         ) from error
+
+
+WarmupStatus = Literal["not_used", "loading", "loaded", "failed"]
+
+
+class CrossEncoderWarmup:
+    """Load the ~2 GB model and run one dummy pair when the API starts.
+
+    It runs in a background thread so the server answers health checks and the
+    other endpoints at once; a reranked request arriving mid-load waits on the
+    same lock instead of loading a second copy.
+    """
+
+    def __init__(self) -> None:
+        self.status: WarmupStatus = "not_used"
+        self._thread: threading.Thread | None = None
+
+    def start(self, settings: Settings) -> None:
+        if settings.reranker_provider != "cross_encoder":
+            self.status = "not_used"
+            return
+        self.status = "loading"
+        self._thread = threading.Thread(
+            target=self._run, args=(settings,), name="reranker-warmup", daemon=True
+        )
+        self._thread.start()
+
+    def wait(self, timeout: float | None = None) -> WarmupStatus:
+        if self._thread is not None:
+            self._thread.join(timeout)
+        return self.status
+
+    def _run(self, settings: Settings) -> None:
+        try:
+            model = load_cross_encoder(
+                settings.reranker_model,
+                settings.reranker_max_length,
+                settings.reranker_device or None,
+            )
+            # The first predict compiles kernels (slow on MPS); pay for it here.
+            model.predict([("warm up", "warm up")], batch_size=1, show_progress_bar=False)
+        except Exception:
+            self.status = "failed"
+            logger.warning("Cross-encoder warm-up failed", exc_info=True)
+            return
+        self.status = "loaded"
+
+
+cross_encoder_warmup = CrossEncoderWarmup()
 
 
 def build_reranker(settings: Settings) -> JobReranker:
