@@ -18,7 +18,7 @@ def add_job(
     required_skills: tuple[str, ...] = (),
     preferred_skills: tuple[str, ...] = (),
 ) -> Job:
-    company = Company(name=company_name, location=location)
+    company = Company(name=company_name)
     job = Job(
         title=title,
         company=company,

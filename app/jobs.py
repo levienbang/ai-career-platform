@@ -26,7 +26,6 @@ def _to_response(job: Job) -> JobResponse:
                 JobSkillResponse(
                     skill=job_skill.skill.canonical_name,
                     requirement_type=job_skill.requirement_type,
-                    importance=job_skill.importance,
                     evidence_text=job_skill.evidence_text,
                 )
                 for job_skill in job.skills

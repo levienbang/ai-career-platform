@@ -89,7 +89,7 @@ def match_cv(name: str, content: bytes, limit: int) -> dict:
     return {"kind": "cv_match", "data": data, "error": error, "file_name": name}
 
 
-def skill_gap(name: str, content: bytes, job_ids: list[int]) -> dict:
+def analyze_skill_gap(name: str, content: bytes, job_ids: list[int]) -> dict:
     data, error = call_api(
         "POST",
         "/cv/upload",
@@ -156,7 +156,7 @@ def render_cv_match(message: dict) -> None:
                 "#": rank,
                 "final": round(job["final_score"], 3),
                 "semantic": round(job["semantic_score"], 3),
-                "skill": round(job["skill_score"], 2),
+                "skill": round(job["fit_score"], 2),
                 "title": job["title"],
                 "location": job.get("location") or "—",
                 "khớp": ", ".join(job["matched_skills"]),
@@ -177,7 +177,7 @@ def render_cv_match(message: dict) -> None:
 def render_cv_gap(message: dict) -> None:
     data = message["data"]
     st.markdown(f"**Skill gap** của `{message['file_name']}` so với {len(data['jobs'])} job")
-    missing = sorted(data.get("missing_required_skills", []), key=lambda s: -s["frequency"])
+    missing = data.get("missing_required_skills", [])
     if missing:
         st.markdown("Skill **bắt buộc** còn thiếu (tỉ lệ job yêu cầu):")
         st.dataframe(
@@ -189,7 +189,7 @@ def render_cv_gap(message: dict) -> None:
         st.success("Không thiếu skill bắt buộc nào trong các job đã chọn.")
 
 
-def render(message: dict) -> None:
+def render_message(message: dict) -> None:
     if message.get("error"):
         st.error(message["error"])
     if message.get("query") and "\n" in message["query"]:
@@ -318,16 +318,16 @@ st.title("💼 Career Chat")
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
-        render(message)
+        render_message(message)
 
 cv = st.session_state.get("cv")
 if cv and cv.get("matched_ids"):
     label = f"Phân tích skill gap của CV với top {min(gap_top, len(cv['matched_ids']))} job"
     if st.button(label):
         with st.chat_message("assistant"), st.spinner("Đang phân tích skill gap..."):
-            reply = skill_gap(cv["name"], cv["content"], cv["matched_ids"][:gap_top])
+            reply = analyze_skill_gap(cv["name"], cv["content"], cv["matched_ids"][:gap_top])
             reply["role"] = "assistant"
-            render(reply)
+            render_message(reply)
         st.session_state.messages.append(reply)
         save_current_chat()
 
@@ -345,7 +345,7 @@ if prompt:
     user_message = {"role": "user", "kind": "text", "content": user_note}
     st.session_state.messages.append(user_message)
     with st.chat_message("user"):
-        render(user_message)
+        render_message(user_message)
 
     with st.chat_message("assistant"):
         if files:
@@ -363,7 +363,7 @@ if prompt:
             with st.spinner("Agent đang xử lý..."):
                 reply = ask_agent(text, st.session_state.messages[:-1])
         reply["role"] = "assistant"
-        render(reply)
+        render_message(reply)
     st.session_state.messages.append(reply)
     save_current_chat()
     st.rerun()

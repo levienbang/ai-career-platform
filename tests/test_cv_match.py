@@ -83,8 +83,8 @@ def test_recognize_shared_and_match_scoring(db_session, taxonomy):
     )
     assert [item.job_id for item in report.jobs] == [jobs[0].id, jobs[1].id, jobs[2].id]
     assert report.jobs[0].final_score == 0.64
-    assert report.jobs[1].skill_score == 0
-    assert report.jobs[2].skill_score == 0
+    assert report.jobs[1].fit_score == 0
+    assert report.jobs[2].fit_score == 0
     assert report.jobs[0].company is None
     assert report.jobs[0].model_dump().get("experience_years_min") is None
 

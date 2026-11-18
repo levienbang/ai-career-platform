@@ -8,12 +8,13 @@ Run from the repository root with `python -m scripts.<name>` (or prefix with
 | Script | Purpose / when to run | Paid API calls | Default effects | Service called |
 |---|---|---|---|---|
 | `sync_skills.py` | Synchronize reviewed skills before imports or after taxonomy edits; safe on an existing DB | None | Writes skills/aliases and merges extracted synonyms; idempotent, no jobs | `skill_taxonomy.seed_taxonomy` |
-| `load_demo_jobs.py` | Load 12 jobs on an isolated demo/evaluation DB; do not mix with real Crawl data | None | Synchronizes skills, then writes demo jobs; idempotent, one transaction | `skill_taxonomy.seed_taxonomy`, `skill_taxonomy.load_demo_jobs` |
+| `load_demo_jobs.py` | Load 12 jobs on an isolated demo/evaluation DB; do not mix with real Crawl data | None | Synchronizes skills, then writes demo jobs; idempotent, one transaction | `taxonomy.seed_taxonomy`, `taxonomy.persist_demo_jobs` |
 | `index_jobs.py` | Index after imports or skill changes; `--full` embeds all jobs again | Google, except `--payload-only` | Writes Qdrant; skips unchanged jobs; payload mode only refreshes existing points | `QdrantJobIndex.index_all` / `refresh_payloads`, embedding provider |
 | `merge_skills.py` | Preview or apply known synonym merges | None | Dry-run; `--apply` writes merges | `skill_taxonomy.plan_skill_merges` / `apply_skill_merges` |
 | `learn_skill_aliases.py` | Propose alias decisions for extracted skills, review saved JSON, then apply | DeepSeek even in dry-run; none with `--from FILE` | Dry-run for DB, writes proposal JSON; `--apply` writes decisions/aliases/merges | `SkillAliasLearner.propose` / `apply` |
 | `review_skill_decisions.py` | List or manually approve, keep, or revert learned decisions | None | Required subcommand: `list` reads; `approve`, `keep-new`, `revert` write immediately | `skill_review.approve_decision` / `keep_new_decision` / `revert_alias` |
 | `check_deepseek.py` | Check provider connectivity and structured output when troubleshooting | DeepSeek, one request | Live API check; no DB writes or dry-run | `llm.build_structured_chat_model`, `structured_output_guidance` |
+| `download_reranker.py` | Download the local cross-encoder (`RERANKER_MODEL`, ~2.3 GB to the Hugging Face cache) and rerank three sample jobs once; needs `uv sync --extra rerank` | None (one Hugging Face download) | Writes only the model cache; exits 1 if the sample NLP job is not ranked first | `CrossEncoderJobReranker` |
 | `qdrant_snapshot.py` | Back up / restore job vectors (used by `deploy/backup.sh`, `deploy/restore.sh`) | None | `save` streams a snapshot to stdout; `restore` replaces the collection from stdin | Qdrant snapshot HTTP API |
 
 ## Thứ tự dựng từ DB trống

@@ -8,7 +8,12 @@ from sqlalchemy.orm import Session
 
 from app.config import Settings
 from app.db.models import JobSkill, Skill, SkillAlias, SkillDecision
-from app.ingestion.normalizer import SkillNormalizer, skill_lookup_key, skill_match_key
+from app.ingestion.normalizer import (
+    SkillNormalizer,
+    mentions,
+    normalize_skill_text,
+    skill_match_key,
+)
 from app.skills.learning import LearningProposal, SkillAliasLearner
 
 
@@ -42,14 +47,6 @@ def keep_new_decision(session: Session, name: str) -> None:
     session.flush()
 
 
-def _mentions(text: str | None, name: str) -> bool:
-    return bool(
-        re.search(
-            rf"(?<!\w){re.escape(skill_lookup_key(name))}(?!\w)", skill_lookup_key(text or "")
-        )
-    )
-
-
 def revert_alias(session: Session, name: str) -> int:
     alias = next(
         (
@@ -71,7 +68,7 @@ def revert_alias(session: Session, name: str) -> int:
     links = list(session.scalars(select(JobSkill).where(JobSkill.skill_id == canonical.id)))
     affected = 0
     for link in links:
-        if not _mentions(link.evidence_text, alias.alias):
+        if not mentions(link.evidence_text, alias.alias):
             continue
         affected += 1
         existing = session.scalar(
@@ -82,15 +79,15 @@ def revert_alias(session: Session, name: str) -> int:
             )
         )
         remaining_evidence = re.sub(
-            rf"(?<!\w){re.escape(skill_lookup_key(alias.alias))}(?!\w)",
+            rf"(?<!\w){re.escape(normalize_skill_text(alias.alias))}(?!\w)",
             "",
-            skill_lookup_key(link.evidence_text or ""),
+            normalize_skill_text(link.evidence_text or ""),
         ).strip(" ;")
         canonical_names = [
             canonical.canonical_name,
             *(other.alias for other in canonical.aliases if other.id != alias.id),
         ]
-        if any(_mentions(remaining_evidence, wording) for wording in canonical_names):
+        if any(mentions(remaining_evidence, wording) for wording in canonical_names):
             # Retain canonical evidence only when it occurs outside the reverted wording.
             link.evidence_text = remaining_evidence
             if existing is None:
@@ -99,7 +96,6 @@ def revert_alias(session: Session, name: str) -> int:
                         job_id=link.job_id,
                         skill_id=skill.id,
                         requirement_type=link.requirement_type,
-                        importance=link.importance,
                         evidence_text=alias.alias,
                     )
                 )

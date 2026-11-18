@@ -31,9 +31,6 @@ class Company(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    industry: Mapped[str | None] = mapped_column(String(255))
-    location: Mapped[str | None] = mapped_column(String(255))
-    website: Mapped[str | None] = mapped_column(String(2048))
 
     jobs: Mapped[list["Job"]] = relationship(back_populates="company")
 
@@ -142,10 +139,6 @@ class JobSkill(Base):
     __tablename__ = "job_skills"
     __table_args__ = (
         UniqueConstraint("job_id", "skill_id", "requirement_type", name="uq_job_skill_requirement"),
-        CheckConstraint(
-            "importance IS NULL OR (importance >= 0 AND importance <= 1)",
-            name="ck_job_skills_importance_range",
-        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -163,7 +156,6 @@ class JobSkill(Base):
         ),
         nullable=False,
     )
-    importance: Mapped[Decimal | None] = mapped_column(Numeric(3, 2))
     evidence_text: Mapped[str | None] = mapped_column(Text)
 
     job: Mapped[Job] = relationship(back_populates="skills")

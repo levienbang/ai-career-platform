@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.config import Settings
 from app.cv.extractor import StructuredCVExtractor
-from app.cv.gap import _job_gap, recognize_cv_skills
+from app.cv.gap import compute_job_gap, recognize_cv_skills
 from app.cv.pdf import PDFTextLoader
 from app.db.repositories import JobRepository
 from app.retrieval.types import SearchHit
@@ -59,19 +59,14 @@ class CVMatchService:
             job = jobs_by_id.get(hit.job_id)
             if job is None:
                 continue
-            gap = _job_gap(job, set(recognized))
+            gap = compute_job_gap(job, set(recognized))
             matches.append(
                 CVMatchedJob(
-                    job_id=job.id,
-                    title=job.title,
+                    **gap.model_dump(),
                     company=job.company.name if job.company else None,
                     location=job.location,
                     final_score=weight * hit.score + (1 - weight) * gap.fit_score,
                     semantic_score=hit.score,
-                    skill_score=gap.fit_score,
-                    matched_skills=gap.matched_skills,
-                    missing_required_skills=gap.missing_required_skills,
-                    missing_preferred_skills=gap.missing_preferred_skills,
                 )
             )
         matches.sort(key=lambda item: (-item.final_score, -item.semantic_score, item.job_id))

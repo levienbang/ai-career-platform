@@ -1,6 +1,8 @@
 import math
 import re
 from collections import Counter
+from functools import lru_cache
+from typing import Literal
 
 from sqlalchemy.orm import Session
 
@@ -8,11 +10,44 @@ from app.db.repositories import JobRepository
 from app.retrieval.documents import SearchDocument, build_search_document
 from app.retrieval.types import SearchHit
 
-TOKEN_PATTERN = re.compile(r"[\w+#.]+", re.UNICODE)
+KeywordTokenizer = Literal["regex", "pyvi"]
+
+# Keeps technical names whole (C++, C#, Node.js, ASP.NET) but never swallows a
+# sentence-final dot, so "Docker." and "Docker" are the same token.
+TOKEN_PATTERN = re.compile(r"[\w+#]+(?:\.[\w+#]+)*", re.UNICODE)
 
 
-def tokenize(text: str) -> list[str]:
+def _regex_tokens(text: str) -> list[str]:
     return [token.casefold() for token in TOKEN_PATTERN.findall(text)]
+
+
+@lru_cache(maxsize=1)
+def _vietnamese_segmenter():
+    from pyvi import ViTokenizer
+
+    return ViTokenizer.tokenize
+
+
+def vietnamese_compounds(text: str) -> list[str]:
+    """Multi-syllable Vietnamese words found by pyvi, e.g. "dữ liệu" -> "dữ_liệu"."""
+    segmented = _vietnamese_segmenter()(text)
+    return [word.casefold() for word in segmented.split() if "_" in word.strip("_")]
+
+
+@lru_cache(maxsize=16_384)
+def _cached_tokens(text: str, tokenizer: KeywordTokenizer) -> tuple[str, ...]:
+    tokens = _regex_tokens(text)
+    if tokenizer == "pyvi":
+        # pyvi breaks "C++" or "Node.js" apart, so it only adds compounds on top of
+        # the regex tokens; single-syllable query words still match.
+        tokens += vietnamese_compounds(text)
+    return tuple(tokens)
+
+
+def tokenize(text: str, tokenizer: KeywordTokenizer = "regex") -> list[str]:
+    if tokenizer not in ("regex", "pyvi"):
+        raise ValueError(f"Unsupported keyword tokenizer '{tokenizer}'")
+    return list(_cached_tokens(text, tokenizer))
 
 
 def _to_hit(document: SearchDocument, score: float) -> SearchHit:
@@ -32,13 +67,21 @@ def _to_hit(document: SearchDocument, score: float) -> SearchHit:
 
 
 class KeywordSearchService:
-    def __init__(self, session: Session, *, k1: float = 1.5, b: float = 0.75) -> None:
+    def __init__(
+        self,
+        session: Session,
+        *,
+        k1: float = 1.5,
+        b: float = 0.75,
+        tokenizer: KeywordTokenizer = "regex",
+    ) -> None:
         self.session = session
         self.k1 = k1
         self.b = b
+        self.tokenizer = tokenizer
 
     def search(self, query: str, *, limit: int = 5) -> list[SearchHit]:
-        query_tokens = tokenize(query)
+        query_tokens = tokenize(query, self.tokenizer)
         if not query_tokens:
             return []
 
@@ -46,7 +89,7 @@ class KeywordSearchService:
         if not documents:
             return []
 
-        corpus_tokens = [tokenize(document.text) for document in documents]
+        corpus_tokens = [tokenize(document.text, self.tokenizer) for document in documents]
         average_length = sum(map(len, corpus_tokens)) / len(corpus_tokens)
         document_frequency = Counter(token for tokens in corpus_tokens for token in set(tokens))
         query_counts = Counter(query_tokens)

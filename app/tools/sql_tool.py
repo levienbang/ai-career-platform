@@ -47,13 +47,12 @@ ALLOWED_SCHEMA: dict[str, frozenset[str]] = {
             "location",
             "employment_type",
             "experience_years_min",
-            "posted_at",
             "ingested_at",
         }
     ),
-    "companies": frozenset({"id", "name", "industry", "location"}),
+    "companies": frozenset({"id", "name"}),
     "skills": frozenset({"id", "canonical_name", "category"}),
-    "job_skills": frozenset({"id", "job_id", "skill_id", "requirement_type", "importance"}),
+    "job_skills": frozenset({"id", "job_id", "skill_id", "requirement_type"}),
 }
 
 SAFE_FUNCTIONS = frozenset(

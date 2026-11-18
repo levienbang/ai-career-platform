@@ -16,7 +16,7 @@ def build_hybrid_search_service(
     settings: Settings,
 ) -> HybridSearchService:
     return HybridSearchService(
-        KeywordSearchService(db),
+        KeywordSearchService(db, tokenizer=settings.keyword_tokenizer),
         DenseSearchService(client, embedder, settings.qdrant_collection),
         candidate_limit=settings.hybrid_candidate_limit,
         rrf_k=settings.rrf_k,

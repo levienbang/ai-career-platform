@@ -80,7 +80,7 @@ SettingsDependency = Annotated[Settings, Depends(get_settings)]
 RerankerDependency = Annotated[JobReranker, Depends(get_job_reranker)]
 
 
-def _response(
+def _search_response(
     method: Literal["keyword", "dense", "hybrid", "reranked"],
     request: SearchRequest,
     hits: list[SearchHit],
@@ -121,10 +121,14 @@ def _raise_retrieval_http_error(error: Exception) -> NoReturn:
 
 
 @router.post("/keyword", response_model=SearchResponse)
-def keyword_search(request: SearchRequest, db: DbSession) -> SearchResponse:
+def keyword_search(
+    request: SearchRequest, db: DbSession, settings: SettingsDependency
+) -> SearchResponse:
     started_at = perf_counter()
-    hits = KeywordSearchService(db).search(request.query, limit=request.limit)
-    return _response("keyword", request, hits, started_at)
+    hits = KeywordSearchService(db, tokenizer=settings.keyword_tokenizer).search(
+        request.query, limit=request.limit
+    )
+    return _search_response("keyword", request, hits, started_at)
 
 
 @router.post("/semantic", response_model=SearchResponse, dependencies=[PaidCallLimit])
@@ -141,7 +145,7 @@ def dense_search(
         )
     except Exception as error:
         _raise_retrieval_http_error(error)
-    return _response("dense", request, hits, started_at)
+    return _search_response("dense", request, hits, started_at)
 
 
 @router.post("/hybrid", response_model=SearchResponse, dependencies=[PaidCallLimit])
@@ -159,7 +163,7 @@ def hybrid_search(
         )
     except Exception as error:
         _raise_retrieval_http_error(error)
-    return _response("hybrid", request, hits, started_at)
+    return _search_response("hybrid", request, hits, started_at)
 
 
 @router.post("/reranked", response_model=SearchResponse, dependencies=[PaidCallLimit])
@@ -178,7 +182,7 @@ def reranked_search(
         )
     except Exception as error:
         _raise_retrieval_http_error(error)
-    return _response("reranked", request, hits, started_at)
+    return _search_response("reranked", request, hits, started_at)
 
 
 @router.post("/index", response_model=IndexResponse, dependencies=[AdminKey])

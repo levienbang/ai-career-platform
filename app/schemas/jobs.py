@@ -1,5 +1,4 @@
 from datetime import datetime
-from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -16,7 +15,6 @@ class CompanySummary(BaseModel):
 class JobSkillResponse(BaseModel):
     skill: str
     requirement_type: RequirementType
-    importance: Decimal | None
     evidence_text: str | None
 
 

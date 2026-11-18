@@ -4,6 +4,9 @@ Dry-run by default: prints the planned paid calls and exits. Pass --run to call
 DeepSeek (routing + SQL generation) and Google embedding (one call per query).
 --only limits the run to some sections; other sections keep their saved results.
 --rescore re-grades saved SQL answers after label fixes, with no API calls.
+Retrieval compares BM25 with the regex and pyvi tokenizers, dense, hybrid, and
+hybrid followed by each reranker in --rerankers (cross_encoder and
+cross_encoder_chunked run locally and are free; llm adds one DeepSeek call per query).
 """
 
 import argparse
@@ -21,6 +24,11 @@ from app.retrieval.dense import DenseSearchService
 from app.retrieval.embeddings import build_embedding_provider
 from app.retrieval.hybrid import HybridSearchService
 from app.retrieval.keyword import KeywordSearchService
+from app.retrieval.reranker import (
+    CrossEncoderJobReranker,
+    LangChainJobReranker,
+    RerankedSearchService,
+)
 from app.tools.sql_tool import build_sql_tool
 
 CASES_FILE = Path(__file__).with_name("real_cases.json")
@@ -120,18 +128,50 @@ def evaluate_sql(settings: Settings, cases: list[dict]) -> dict:
     return {"accuracy": mean(row["correct"] for row in rows), "cases": rows}
 
 
-def evaluate_retrieval(settings: Settings, cases: list[dict], embedder) -> dict:
+RERANKERS = {
+    "cross_encoder": lambda settings: CrossEncoderJobReranker(
+        settings.model_copy(update={"reranker_chunk_words": 0})
+    ),
+    "cross_encoder_chunked": lambda settings: CrossEncoderJobReranker(
+        settings.model_copy(update={"reranker_chunk_words": settings.reranker_chunk_words or 200})
+    ),
+    "llm": LangChainJobReranker,
+}
+
+
+def evaluate_retrieval(
+    settings: Settings, cases: list[dict], embedder, rerankers: dict[str, object]
+) -> dict:
     client = QdrantClient(url=settings.qdrant_url, timeout=settings.qdrant_timeout_seconds)
-    names = ("keyword", "dense", "hybrid")
-    scores = {name: {"precision_at_5": [], "mrr_at_10": [], "latency_ms": []} for name in names}
     rows = []
     with SessionLocal() as session:
-        keyword = KeywordSearchService(session)
         dense = DenseSearchService(client, embedder, settings.qdrant_collection)
-        hybrid = HybridSearchService(
-            keyword, dense, candidate_limit=settings.hybrid_candidate_limit, rrf_k=settings.rrf_k
-        )
-        methods = {"keyword": keyword, "dense": dense, "hybrid": hybrid}
+
+        def hybrid_with(keyword: KeywordSearchService) -> HybridSearchService:
+            return HybridSearchService(
+                keyword,
+                dense,
+                candidate_limit=settings.hybrid_candidate_limit,
+                rrf_k=settings.rrf_k,
+            )
+
+        keyword = KeywordSearchService(session, tokenizer="regex")
+        keyword_pyvi = KeywordSearchService(session, tokenizer="pyvi")
+        hybrid = hybrid_with(keyword)
+        methods = {
+            "keyword": keyword,
+            "keyword_pyvi": keyword_pyvi,
+            "dense": dense,
+            "hybrid": hybrid,
+            "hybrid_pyvi": hybrid_with(keyword_pyvi),
+        }
+        for name, reranker in rerankers.items():
+            methods[f"reranked_{name}"] = RerankedSearchService(
+                hybrid, reranker, candidate_limit=settings.reranker_max_candidates
+            )
+        scores = {
+            name: {"precision_at_5": [], "mrr_at_10": [], "latency_ms": []} for name in methods
+        }
         for case in cases:
             relevant = set(case["relevant_job_ids"])
             row = {"id": case["id"], "query": case["query"], "relevant_count": len(relevant)}
@@ -176,13 +216,22 @@ def main() -> None:
     parser.add_argument("--run", action="store_true", help="Make the paid API calls")
     parser.add_argument("--only", nargs="+", choices=SECTIONS, default=list(SECTIONS))
     parser.add_argument("--rescore", action="store_true", help="Re-grade saved SQL answers")
+    parser.add_argument(
+        "--rerankers",
+        nargs="*",
+        choices=tuple(RERANKERS),
+        default=["cross_encoder", "cross_encoder_chunked"],
+        help="Rerankers applied on top of hybrid retrieval (default: both local cross-encoders)",
+    )
     args = parser.parse_args()
     cases = json.loads(CASES_FILE.read_text(encoding="utf-8"))
     if args.rescore:
         rescore_sql(cases["sql"])
         return
+    retrieval_sections = [n for n in ("retrieval", "retrieval_paraphrase") if n in args.only]
     planned = {
-        "deepseek_calls": sum(len(cases[name]) for name in ("routing", "sql") if name in args.only),
+        "deepseek_calls": sum(len(cases[name]) for name in ("routing", "sql") if name in args.only)
+        + ("llm" in args.rerankers) * sum(len(cases[name]) for name in retrieval_sections),
         "embedding_calls": sum(
             len(cases[name]) for name in ("retrieval", "retrieval_paraphrase") if name in args.only
         ),
@@ -199,15 +248,17 @@ def main() -> None:
         results["routing"] = evaluate_routing(settings, cases["routing"])
     if "sql" in args.only:
         results["sql"] = evaluate_sql(settings, cases["sql"])
-    for name in ("retrieval", "retrieval_paraphrase"):
-        if name in args.only:
-            results[name] = evaluate_retrieval(settings, cases[name], embedder)
+    rerankers = (
+        {name: RERANKERS[name](settings) for name in args.rerankers} if retrieval_sections else {}
+    )
+    for name in retrieval_sections:
+        results[name] = evaluate_retrieval(settings, cases[name], embedder, rerankers)
     RESULTS_FILE.write_text(json.dumps(results, ensure_ascii=False, indent=2) + "\n")
     summary = {
         "routing_accuracy": results.get("routing", {}).get("accuracy"),
         "sql_accuracy": results.get("sql", {}).get("accuracy"),
         **{
-            name: {method: results[name][method] for method in ("keyword", "dense", "hybrid")}
+            name: {method: value for method, value in results[name].items() if method != "cases"}
             for name in ("retrieval", "retrieval_paraphrase")
             if name in results
         },

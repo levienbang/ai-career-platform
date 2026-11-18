@@ -52,7 +52,7 @@ class PaidCallLimiter:
         self._day = ""
         self._day_count = 0
 
-    def check(self, client: str, *, per_minute: int, per_day: int) -> int | None:
+    def check_and_record(self, client: str, *, per_minute: int, per_day: int) -> int | None:
         """Record one call; return seconds to wait when a limit is exceeded."""
         with self._lock:
             now = self._clock()
@@ -90,7 +90,7 @@ def limit_paid_calls(
     if not per_minute and not per_day:
         return
     client = request.client.host if request.client else "unknown"
-    wait = paid_call_limiter.check(client, per_minute=per_minute, per_day=per_day)
+    wait = paid_call_limiter.check_and_record(client, per_minute=per_minute, per_day=per_day)
     if wait is not None:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,

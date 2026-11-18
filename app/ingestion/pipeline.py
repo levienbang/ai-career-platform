@@ -160,7 +160,7 @@ class JobIngestionPipeline:
                         if job_repository.get_by_content_hash(build_content_hash(extracted)):
                             continue
                         names.extend(
-                            normalizer.unknown_names(
+                            normalizer.learnable_names(
                                 [*extracted.required_skills, *extracted.preferred_skills],
                                 f"{source.title or ''} {source.description} "
                                 f"{getattr(source, 'technical_skills', None) or ''}",
@@ -212,9 +212,7 @@ class JobIngestionPipeline:
                         if extracted.company is not None:
                             company = company_repository.get_by_name(extracted.company)
                             if company is None:
-                                company = company_repository.add(
-                                    Company(name=extracted.company, location=extracted.location)
-                                )
+                                company = company_repository.add(Company(name=extracted.company))
                                 self.session.flush()
 
                         job = Job(

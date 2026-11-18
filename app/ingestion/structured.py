@@ -3,7 +3,7 @@
 import ast
 import re
 
-from app.ingestion.normalizer import skill_lookup_key
+from app.ingestion.normalizer import normalize_skill_text
 from app.schemas.ingestion import JobExtraction, RawJobRecord
 
 
@@ -29,7 +29,7 @@ def parse_skill_list(value: object) -> list[str]:
         values = enumeration[1].split(",") if enumeration else [item]
         for value in values:
             skill = value.strip()
-            key = skill_lookup_key(skill)
+            key = normalize_skill_text(skill)
             if skill and len(skill) <= 100 and key not in seen:
                 skills.append(skill)
                 seen.add(key)

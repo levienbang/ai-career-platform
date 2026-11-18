@@ -271,7 +271,7 @@ def test_cv_match_sklearn_job_has_full_skill_score_after_seed(db_session):
     match = service.invoke(b"%PDF-test", limit=1, max_pages=5).jobs[0]
     assert match.matched_skills == ["Scikit-learn"]
     assert match.missing_required_skills == []
-    assert match.skill_score == 1.0
+    assert match.fit_score == 1.0
 
 
 def test_parenthesized_source_import_creates_individual_skills(db_session, fake_extractor):

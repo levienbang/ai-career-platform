@@ -47,7 +47,6 @@ def test_list_jobs_returns_database_records(client, db_session) -> None:
                 {
                     "skill": "Python",
                     "requirement_type": "required",
-                    "importance": None,
                     "evidence_text": "Python",
                 }
             ],

@@ -23,7 +23,7 @@ class EmbeddingProvider(Protocol):
     def embed_query(self, text: str) -> list[float]: ...
 
 
-def _normalize(vector: list[float]) -> list[float]:
+def _l2_normalize(vector: list[float]) -> list[float]:
     magnitude = math.sqrt(sum(value * value for value in vector))
     if magnitude == 0:
         raise EmbeddingServiceError("Embedding provider returned a zero vector")
@@ -69,7 +69,7 @@ class GoogleJobEmbeddingProvider:
                 task_type="RETRIEVAL_DOCUMENT",
                 titles=titles,
             )
-            return [_normalize(vector) for vector in vectors]
+            return [_l2_normalize(vector) for vector in vectors]
         except EmbeddingServiceError:
             raise
         except Exception as error:
@@ -77,7 +77,7 @@ class GoogleJobEmbeddingProvider:
 
     def embed_query(self, text: str) -> list[float]:
         try:
-            return _normalize(self._model.embed_query(text, task_type="RETRIEVAL_QUERY"))
+            return _l2_normalize(self._model.embed_query(text, task_type="RETRIEVAL_QUERY"))
         except EmbeddingServiceError:
             raise
         except Exception as error:

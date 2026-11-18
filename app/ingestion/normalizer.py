@@ -1,5 +1,4 @@
 import re
-import unicodedata
 from dataclasses import dataclass
 
 from sqlalchemy import func, select
@@ -8,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import RequirementType, Skill
 from app.db.repositories import SkillRepository
+from app.ingestion.cleaner import normalize_text
 
 
 class UnknownSkillsError(ValueError):
@@ -23,13 +23,18 @@ class NormalizedJobSkill:
     evidence_text: str
 
 
-def skill_lookup_key(value: str) -> str:
-    normalized = unicodedata.normalize("NFKC", value)
-    return re.sub(r"\s+", " ", normalized).strip().casefold()
+def normalize_skill_text(value: str) -> str:
+    return normalize_text(value).casefold()
+
+
+def mentions(text: str | None, phrase: str) -> bool:
+    """Whether phrase occurs in text as whole words, ignoring case and spacing differences."""
+    pattern = rf"(?<!\w){re.escape(normalize_skill_text(phrase))}(?!\w)"
+    return re.search(pattern, normalize_skill_text(text or "")) is not None
 
 
 def skill_match_key(value: str) -> str:
-    return re.sub(r"[\s.\-_/]", "", skill_lookup_key(value))
+    return re.sub(r"[\s.\-_/]", "", normalize_skill_text(value))
 
 
 class SkillNormalizer:
@@ -39,10 +44,10 @@ class SkillNormalizer:
         self._wordings: dict[int, set[str]] = {}
         for skill in SkillRepository(session).list_with_aliases():
             self._taxonomy.setdefault(skill_match_key(skill.canonical_name), skill)
-            self._wordings[skill.id] = {skill_lookup_key(skill.canonical_name)}
+            self._wordings[skill.id] = {normalize_skill_text(skill.canonical_name)}
             for alias in skill.aliases:
                 self._taxonomy.setdefault(skill_match_key(alias.alias), skill)
-                self._wordings[skill.id].add(skill_lookup_key(alias.alias))
+                self._wordings[skill.id].add(normalize_skill_text(alias.alias))
 
     def resolve(self, value: str) -> Skill | None:
         return self._taxonomy.get(skill_match_key(value))
@@ -51,26 +56,20 @@ class SkillNormalizer:
         wordings = self._wordings.get(skill.id, set()).copy()
         # A resolved spelling still needs literal, word-boundary evidence in the source.
         if name is not None and self.resolve(name) is skill:
-            wordings.add(skill_lookup_key(name))
-        for wording in wordings:
-            if re.search(rf"(?<!\w){re.escape(wording)}(?!\w)", skill_lookup_key(evidence)):
-                return True
-        return False
+            wordings.add(normalize_skill_text(name))
+        return any(mentions(evidence, wording) for wording in wordings)
 
-    def unknown_names(self, values: list[str], evidence_text: str) -> list[str]:
+    def learnable_names(self, values: list[str], evidence_text: str) -> list[str]:
         """Only grounded, short names enter learning; retry undecided extracted skills."""
         names = []
         for value in values:
-            name = " ".join(unicodedata.normalize("NFKC", value).split())
+            name = normalize_text(value)
             skill = self.resolve(name)
             if skill is not None and skill.origin != "extracted":
                 continue
             if not name or len(name) > 50 or len(name.split()) > 5:
                 continue
-            if re.search(
-                rf"(?<!\w){re.escape(skill_lookup_key(name))}(?!\w)",
-                skill_lookup_key(evidence_text),
-            ):
+            if mentions(evidence_text, name):
                 names.append(name)
         return names
 
@@ -91,10 +90,10 @@ class SkillNormalizer:
             (RequirementType.PREFERRED, preferred_skills),
         ):
             for evidence in values:
-                name = " ".join(unicodedata.normalize("NFKC", evidence).split())
+                name = normalize_text(evidence)
                 if not name or len(name) > 100:
                     continue
-                key = skill_lookup_key(name)
+                key = normalize_skill_text(name)
                 skill = self.resolve(name)
                 if skill is not None and evidence_text is not None:
                     if not self.evidence_mentions(skill, evidence_text, name=name):
@@ -102,9 +101,7 @@ class SkillNormalizer:
                 if skill is None:
                     if len(name.split()) > 5 or len(name) > 50:
                         continue
-                    if evidence_text is None or not re.search(
-                        rf"(?<!\w){re.escape(key)}(?!\w)", skill_lookup_key(evidence_text)
-                    ):
+                    if evidence_text is None or not mentions(evidence_text, key):
                         continue
                     if not create_missing:
                         if name not in unknown:
