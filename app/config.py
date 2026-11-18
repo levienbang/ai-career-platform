@@ -53,6 +53,18 @@ class Settings(BaseSettings):
     reranker_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
     reranker_max_retries: int = Field(default=1, ge=0, le=5)
     reranker_max_candidates: int = Field(default=20, ge=2, le=50)
+    reranker_provider: Literal["llm", "cross_encoder"] = "llm"
+    reranker_model: str = "BAAI/bge-reranker-v2-m3"
+    reranker_max_length: int = Field(default=512, ge=64, le=8192)
+    reranker_batch_size: int = Field(default=8, ge=1, le=64)
+    # 0 scores each job as one passage (truncated at max length); >0 splits long jobs
+    # into header-prefixed sentence windows of this many words and keeps the best chunk.
+    reranker_chunk_words: int = Field(default=0, ge=0, le=2_000)
+    reranker_chunk_overlap_words: int = Field(default=40, ge=0, le=500)
+    reranker_max_chunks: int = Field(default=4, ge=1, le=16)
+    # Empty picks automatically (CUDA, then Apple MPS, then CPU).
+    reranker_device: str | None = None
+    keyword_tokenizer: Literal["regex", "pyvi"] = "regex"
     qdrant_url: str = "http://localhost:6333"
     qdrant_collection: str = "jobs"
     qdrant_timeout_seconds: float = Field(default=10.0, gt=0, le=120)
@@ -66,6 +78,8 @@ class Settings(BaseSettings):
     public_rate_limit_per_minute: int = Field(default=0, ge=0, le=1000)
     public_daily_limit: int = Field(default=0, ge=0, le=100_000)
     cv_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
+    # OCR scanned CVs (empty text layer) with Apple Vision; needs macOS + `--extra ocr`.
+    cv_ocr_enabled: bool = True
     langsmith_tracing: bool = False
     langsmith_api_key: SecretStr | None = None
     langsmith_project: str = "ai-career-platform"
@@ -101,6 +115,14 @@ class Settings(BaseSettings):
         ]
         if missing:
             raise ValueError(f"APP_ENV=production requires {', '.join(missing)}")
+        return self
+
+    @model_validator(mode="after")
+    def require_chunk_overlap_below_size(self) -> "Settings":
+        if self.reranker_chunk_words and (
+            self.reranker_chunk_overlap_words >= self.reranker_chunk_words
+        ):
+            raise ValueError("RERANKER_CHUNK_OVERLAP_WORDS must be below RERANKER_CHUNK_WORDS")
         return self
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

@@ -121,9 +121,13 @@ def _raise_retrieval_http_error(error: Exception) -> NoReturn:
 
 
 @router.post("/keyword", response_model=SearchResponse)
-def keyword_search(request: SearchRequest, db: DbSession) -> SearchResponse:
+def keyword_search(
+    request: SearchRequest, db: DbSession, settings: SettingsDependency
+) -> SearchResponse:
     started_at = perf_counter()
-    hits = KeywordSearchService(db).search(request.query, limit=request.limit)
+    hits = KeywordSearchService(db, tokenizer=settings.keyword_tokenizer).search(
+        request.query, limit=request.limit
+    )
     return _search_response("keyword", request, hits, started_at)
 
 

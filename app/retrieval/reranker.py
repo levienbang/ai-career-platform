@@ -1,6 +1,7 @@
 import json
 from dataclasses import replace
-from typing import Protocol
+from functools import lru_cache
+from typing import Any, Protocol
 
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
@@ -11,6 +12,7 @@ from app.llm import (
     build_structured_chat_model,
     structured_output_guidance,
 )
+from app.retrieval.chunking import chunk_search_document
 from app.retrieval.hybrid import HybridSearchService
 from app.retrieval.types import SearchHit
 
@@ -154,5 +156,84 @@ class RerankedSearchService:
         return reranked[:limit]
 
 
+class CrossEncoderJobReranker:
+    """Score (query, job document) pairs with a local cross-encoder such as bge-reranker-v2-m3.
+
+    Unlike the LLM reranker it cannot omit, duplicate or invent job IDs: it returns
+    exactly one score per candidate, deterministically and without network calls.
+    """
+
+    def __init__(self, settings: Settings, *, model: Any | None = None) -> None:
+        if model is None:
+            model = load_cross_encoder(
+                settings.reranker_model,
+                settings.reranker_max_length,
+                settings.reranker_device or None,
+            )
+        self._model = model
+        self._batch_size = settings.reranker_batch_size
+        self._chunk_words = settings.reranker_chunk_words
+        self._chunk_overlap_words = settings.reranker_chunk_overlap_words
+        self._max_chunks = settings.reranker_max_chunks
+
+    def _passages(self, candidate: SearchHit) -> list[str]:
+        text = candidate.document_text or candidate.title
+        if self._chunk_words == 0:
+            return [text]
+        return chunk_search_document(
+            text,
+            max_words=self._chunk_words,
+            overlap_words=self._chunk_overlap_words,
+            max_chunks=self._max_chunks,
+        )
+
+    def rerank(self, query: str, candidates: list[SearchHit]) -> list[SearchHit]:
+        if not candidates:
+            return []
+        owners: list[int] = []
+        pairs: list[tuple[str, str]] = []
+        for index, candidate in enumerate(candidates):
+            for passage in self._passages(candidate):
+                owners.append(index)
+                pairs.append((query, passage))
+        try:
+            pair_scores = [
+                float(score)
+                for score in self._model.predict(
+                    pairs, batch_size=self._batch_size, show_progress_bar=False
+                )
+            ]
+        except Exception as error:
+            raise RerankerServiceError("Cross-encoder reranking failed") from error
+        if len(pair_scores) != len(pairs):
+            raise RerankerResponseError("Cross-encoder must score every candidate exactly once")
+        # MaxP: a job is as relevant as its best-matching chunk.
+        scores = [float("-inf")] * len(candidates)
+        for owner, score in zip(owners, pair_scores, strict=True):
+            scores[owner] = max(scores[owner], score)
+        ordered = sorted(range(len(candidates)), key=lambda index: (-scores[index], index))
+        return [replace(candidates[index], score=scores[index]) for index in ordered]
+
+
+@lru_cache(maxsize=2)
+def load_cross_encoder(model_name: str, max_length: int, device: str | None) -> Any:
+    """Load once per process; the model is ~2 GB, so per-request loading is not an option."""
+    try:
+        from sentence_transformers import CrossEncoder
+    except ImportError as error:
+        raise RerankerConfigurationError(
+            "RERANKER_PROVIDER=cross_encoder needs the optional extra: uv sync --extra rerank"
+        ) from error
+    try:
+        return CrossEncoder(model_name, max_length=max_length, device=device)
+    except Exception as error:
+        raise RerankerConfigurationError(
+            f"Could not load reranker model '{model_name}'; "
+            "run python -m scripts.download_reranker first"
+        ) from error
+
+
 def build_reranker(settings: Settings) -> JobReranker:
+    if settings.reranker_provider == "cross_encoder":
+        return CrossEncoderJobReranker(settings)
     return LangChainJobReranker(settings)

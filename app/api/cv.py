@@ -12,8 +12,8 @@ from app.cv.gap import TargetJobError
 from app.cv.match import CVMatchService
 from app.cv.pdf import (
     CVPDFError,
-    DoclingPDFTextLoader,
     PDFParserUnavailableError,
+    build_cv_pdf_loader,
     validate_cv_pdf,
 )
 from app.db.session import get_db
@@ -32,7 +32,11 @@ def get_cv_tool(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> CVSkillGapTool:
     try:
-        return CVSkillGapTool(db, DoclingPDFTextLoader(), LangChainCVExtractor(settings))
+        return CVSkillGapTool(
+            db,
+            build_cv_pdf_loader(ocr_enabled=settings.cv_ocr_enabled),
+            LangChainCVExtractor(settings),
+        )
     except CVExtractorError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
 
@@ -46,7 +50,7 @@ def get_cv_match_service(
     try:
         return CVMatchService(
             db,
-            DoclingPDFTextLoader(),
+            build_cv_pdf_loader(ocr_enabled=settings.cv_ocr_enabled),
             LangChainCVExtractor(settings),
             DenseSearchService(client, embedder, settings.qdrant_collection),
             settings,

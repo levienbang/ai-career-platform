@@ -120,7 +120,7 @@ flowchart LR
 
 ## Results on real data
 
-Measured on the 941 real VietJobs IT jobs loaded at evaluation time, with rule-based labels
+Measured on the real VietJobs IT corpus with rule-based labels frozen on the first 941 jobs
 ([`evaluation/real_cases.json`](evaluation/real_cases.json), script
 [`evaluation/evaluate_real_data.py`](evaluation/evaluate_real_data.py)):
 
@@ -128,12 +128,26 @@ Measured on the 941 real VietJobs IT jobs loaded at evaluation time, with rule-b
 |---|---|
 | Router picks the right tool (SQL / search / both) | **12 / 12** |
 | Generated SQL returns the right number | **5 / 5** (all queries validated read-only) |
-| Search, query names the skill — precision@5 | BM25 0.98 · vector 1.00 · hybrid 1.00 |
-| Search, query **paraphrased** (no skill names) — precision@5 | BM25 **0.34** · vector **0.88** · hybrid 0.72 |
+| Search, query names the skill — precision@5 | BM25 0.96 · vector 1.00 · hybrid 1.00 · + cross-encoder 0.96 |
+
+Paraphrased queries (no skill names), 1081 jobs in the index, Apple M1:
+
+| Method | precision@5 | MRR@10 | median latency |
+|---|---|---|---|
+| BM25, regex tokens | 0.30 | 0.44 | ~0.4 s |
+| BM25 + pyvi compounds | 0.38 | 0.66 | ~0.2 s |
+| Vector (Gemini embedding) | **0.88** | 1.00 | ~0.6 s |
+| Hybrid RRF | 0.74 | 1.00 | ~0.4 s |
+| Hybrid RRF, pyvi BM25 | 0.70 | 1.00 | ~0.4 s |
+| Hybrid + `bge-reranker-v2-m3` (local) | 0.80 | 0.93 | ~4.8 s |
+| Hybrid + reranker on 200-word chunks | 0.76 | 0.93 | ~7.9 s |
 
 **What the numbers say:** keyword search collapses when users describe a job instead of naming
-the skill ("phone OS made by Google" shares no words with "Android"); vector search keeps working. Equal-weight RRF lets
-BM25 noise into the top 5, so the next step is weighting the fusion or reranking — and measuring it.
+the skill ("phone OS made by Google" shares no words with "Android"); vector search keeps working.
+Vietnamese word segmentation (pyvi) lifts BM25 but not the fused result. The local cross-encoder
+recovers part of what equal-weight RRF loses, yet still trails pure vector search and costs ~4 s
+on CPU/MPS. Several of its "misses" are Data Scientist jobs for an ML query — likely silver-label
+false negatives, which is what the LLM judge (`evaluation/evaluate_judge.py`) is for.
 
 ---
 
@@ -151,7 +165,10 @@ BM25 noise into the top 5, so the next step is weighting the fusion or reranking
   isolate a bad record, resumable indexing, idempotent imports.
 - **Ready for the public internet.** Admin key for writes, per-client and daily limits on routes
   that spend paid API calls, password-gated demo.
-- **323 offline tests** in CI (fake LLM/embeddings, SQLite, in-memory Qdrant) — no keys, no cost.
+- **Evaluation beyond silver labels.** An LLM judge grades pooled (query, job) pairs 0/1/2 for
+  judged precision/nDCG and Cohen's kappa against the rule-based labels, with a blind 30-pair human
+  sheet; a deterministic groundedness check flags job ids, titles or numbers not in tool results.
+- **391 offline tests** in CI (fake LLM/embeddings, SQLite, in-memory Qdrant) — no keys, no cost.
 
 ---
 
@@ -166,6 +183,18 @@ docker compose exec api python -m scripts.index_jobs
 cd demo && uv run streamlit run app.py    # chat UI → http://localhost:8501
 ```
 
+Optional local models (host machine, not the Docker image):
+
+```bash
+uv sync --extra rerank --extra ocr                 # torch + sentence-transformers; ocrmac (macOS)
+uv run python -m scripts.download_reranker         # ~2.3 GB bge-reranker-v2-m3, one sample rerank
+# .env: RERANKER_PROVIDER=cross_encoder  KEYWORD_TOKENIZER=pyvi  CV_OCR_ENABLED=true
+uv run python -m evaluation.evaluate_real_data      # dry-run; --run compares all retrieval methods
+uv run python -m evaluation.evaluate_judge          # dry-run; --run = 54 DeepSeek calls, then cached
+```
+
+Scanned CVs: when Docling finds no text layer, the CV is OCR'd with Apple Vision (`vi-VT`, `en-US`).
+
 API docs: <http://localhost:8000/docs>. Real jobs come from the
 [pipeline repo](https://github.com/levienbang/Job-Data-Engineering-Pipeline) via `POST /jobs/import`.
 
@@ -177,7 +206,7 @@ API docs: <http://localhost:8000/docs>. Real jobs come from the
 |---|---|
 | API | FastAPI, Pydantic, SQLAlchemy, Alembic |
 | Data | PostgreSQL 17, Qdrant |
-| AI | DeepSeek (`deepseek-v4-flash`) via LangChain, Google `gemini-embedding-001`, LangGraph, Docling, sqlglot |
+| AI | DeepSeek (`deepseek-v4-flash`) via LangChain, Google `gemini-embedding-001`, LangGraph, Docling, sqlglot; optional local `BAAI/bge-reranker-v2-m3` (sentence-transformers), pyvi, Apple Vision OCR (ocrmac) |
 | UI | Streamlit |
 | Ops | Docker Compose, uv, Ruff, Pytest, GitHub Actions |
 
@@ -199,7 +228,10 @@ demo/          Streamlit chat
 ## Known limitations
 
 - Import is synchronous; at high volume it should move to a queue with background workers.
-- BM25 scores every job per query; a full-text index would be needed at scale.
+- BM25 scores every job per query (tokens are cached per document); a full-text index would be needed at scale.
+- Job descriptions lose line breaks at ingestion, so chunks follow sentences, not sections.
+- The cross-encoder and Mac OCR are optional extras (`uv sync --extra rerank --extra ocr`); the Docker
+  image ships neither, so there a scanned CV still fails with "no extractable text".
 - Job expiry is not modelled yet; closed postings stay searchable.
 - Rate limits are in memory (one API process); behind the demo they act as one global limit.
 
