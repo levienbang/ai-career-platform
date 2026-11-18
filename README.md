@@ -146,8 +146,10 @@ Paraphrased queries (no skill names), 1081 jobs in the index, Apple M1:
 the skill ("phone OS made by Google" shares no words with "Android"); vector search keeps working.
 Vietnamese word segmentation (pyvi) lifts BM25 but not the fused result. The local cross-encoder
 recovers part of what equal-weight RRF loses, yet still trails pure vector search and costs ~4 s
-on CPU/MPS. Several of its "misses" are Data Scientist jobs for an ML query — likely silver-label
-false negatives, which is what the LLM judge (`evaluation/evaluate_judge.py`) is for.
+on CPU/MPS. A manual 0/1/2 relevance pass over the pooled top-5 (one annotator) agrees: nDCG@5
+dense 0.83 · cross-encoder 0.72 · hybrid 0.67. The reranker rarely surfaces unrelated jobs
+(≥partial 0.92) but prefers adjacent roles, e.g. tabular Data Scientist jobs for a neural-network
+query. `evaluation/evaluate_judge.py` repeats this with an LLM judge at scale.
 
 ---
 
