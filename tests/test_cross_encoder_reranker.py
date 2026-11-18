@@ -117,8 +117,79 @@ def test_build_reranker_selects_provider(monkeypatch) -> None:
 
 
 def test_missing_rerank_extra_is_a_configuration_error(monkeypatch) -> None:
-    reranker_module.load_cross_encoder.cache_clear()
+    reranker_module._load_cross_encoder.cache_clear()
     monkeypatch.setitem(sys.modules, "sentence_transformers", None)
 
     with pytest.raises(RerankerConfigurationError, match="--extra rerank"):
         reranker_module.load_cross_encoder("BAAI/bge-reranker-v2-m3", 512, None)
+    reranker_module._load_cross_encoder.cache_clear()
+
+
+def test_warmup_is_skipped_for_the_llm_reranker() -> None:
+    warmup = reranker_module.CrossEncoderWarmup()
+
+    warmup.start(_settings(reranker_provider="llm"))
+
+    assert warmup.wait(1) == "not_used"
+
+
+def test_warmup_loads_and_runs_one_pair_in_the_background(monkeypatch) -> None:
+    model = KeywordCountModel()
+    loads: list[tuple] = []
+
+    def fake_load(*args):
+        loads.append(args)
+        return model
+
+    monkeypatch.setattr(reranker_module, "load_cross_encoder", fake_load)
+    warmup = reranker_module.CrossEncoderWarmup()
+
+    warmup.start(_settings(reranker_provider="cross_encoder", reranker_device="cpu"))
+
+    assert warmup.wait(5) == "loaded"
+    assert loads == [("BAAI/bge-reranker-v2-m3", 512, "cpu")]
+    assert model.calls == [[("warm up", "warm up")]]
+
+
+def test_failed_warmup_is_reported_not_raised(monkeypatch) -> None:
+    def broken_load(*args):
+        raise RerankerConfigurationError("model missing")
+
+    monkeypatch.setattr(reranker_module, "load_cross_encoder", broken_load)
+    warmup = reranker_module.CrossEncoderWarmup()
+
+    warmup.start(_settings(reranker_provider="cross_encoder"))
+
+    assert warmup.wait(5) == "failed"
+
+
+def test_concurrent_loads_share_one_model(monkeypatch) -> None:
+    import threading
+    import time
+
+    created: list[object] = []
+
+    class SlowCrossEncoder:
+        def __init__(self, *args, **kwargs) -> None:
+            time.sleep(0.05)
+            created.append(self)
+
+    fake_module = type(sys)("sentence_transformers")
+    fake_module.CrossEncoder = SlowCrossEncoder
+    monkeypatch.setitem(sys.modules, "sentence_transformers", fake_module)
+    reranker_module._load_cross_encoder.cache_clear()
+    results: list[object] = []
+    threads = [
+        threading.Thread(
+            target=lambda: results.append(reranker_module.load_cross_encoder("m", 512, None))
+        )
+        for _ in range(4)
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    reranker_module._load_cross_encoder.cache_clear()
+
+    assert len(created) == 1
+    assert all(result is created[0] for result in results)

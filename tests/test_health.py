@@ -17,7 +17,12 @@ def test_ready_checks_database_and_qdrant(client) -> None:
     try:
         response = client.get("/ready")
         assert response.status_code == 200
-        assert response.json() == {"status": "ready", "postgres": "ok", "qdrant": "ok"}
+        assert response.json() == {
+            "status": "ready",
+            "postgres": "ok",
+            "qdrant": "ok",
+            "reranker": "not_used",
+        }
     finally:
         app.dependency_overrides.pop(get_readiness_qdrant, None)
 
