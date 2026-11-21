@@ -1,0 +1,6 @@
+.venv
+.files
+.chats.db
+.env
+.chainlit/translations
+__pycache__

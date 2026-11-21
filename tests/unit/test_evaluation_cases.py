@@ -1,0 +1,58 @@
+import json
+from pathlib import Path
+
+import pytest
+
+from evaluation.evaluate_seed_corpus import (
+    FixtureEmbeddingProvider,
+    FixtureRouter,
+    validate_seed_corpus,
+)
+
+ROOT = Path(__file__).parents[2]
+
+
+def test_ground_truth_manifest_has_39_prelabelled_cases():
+    manifest = json.loads((ROOT / "evaluation/seed_cases.json").read_text())
+    retrieval = json.loads((ROOT / "evaluation/retrieval_cases.json").read_text())
+    routing = json.loads((ROOT / "evaluation/agent_cases.json").read_text())
+    assert [
+        len(retrieval),
+        len(routing),
+        len(manifest["sql"]),
+        len(manifest["cv"]),
+        len(manifest["error"]),
+    ] == [12, 12, 5, 5, 5]
+    assert all("expected_count" in case for case in manifest["sql"])
+    assert all("expected_fit" in case for case in manifest["cv"])
+    assert all("expected" in case for case in manifest["error"])
+
+
+def test_sql_ground_truth_matches_seed_fixture():
+    manifest = json.loads((ROOT / "evaluation/seed_cases.json").read_text())
+    seed = json.loads((ROOT / "data/examples/demo_jobs.json").read_text())
+    jobs = [
+        job for job in seed["jobs"] if job["source_url"].startswith("https://example.com/eval/")
+    ]
+    expected = [
+        len(jobs),
+        sum("Docker" in job["skills"] for job in jobs),
+        sum("FastAPI" in job["skills"] for job in jobs),
+        sum("PostgreSQL" in job["skills"] for job in jobs),
+        sum(job["employment_type"] == "Internship" for job in jobs),
+    ]
+    assert [case["expected_count"] for case in manifest["sql"]] == expected
+
+
+def test_fake_provider_and_router_are_deterministic():
+    embedder = FixtureEmbeddingProvider()
+    assert embedder.embed_query("Python Docker") == embedder.embed_query("Python Docker")
+    assert FixtureRouter().decide("Tìm job và đếm số job").route == "both"
+
+
+def test_evaluation_rejects_contaminated_corpus():
+    seed = json.loads((ROOT / "data/examples/demo_jobs.json").read_text())
+    source_urls = [job["source_url"] for job in seed["jobs"]]
+    validate_seed_corpus(source_urls)
+    with pytest.raises(RuntimeError, match="only the seed jobs"):
+        validate_seed_corpus(source_urls + ["https://example.com/unlabelled"])

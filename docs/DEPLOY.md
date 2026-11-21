@@ -6,7 +6,7 @@ Pack) running `docker-compose.prod.yml`:
 ```mermaid
 flowchart LR
     U([Visitor]) -- "HTTPS :443" --> C[Caddy<br/>auto TLS]
-    C --> D[Streamlit demo<br/>password gate]
+    C --> D[Chainlit chat<br/>password login]
     D --> A[FastAPI<br/>admin key · rate limits]
     P([Job pipeline<br/>same host]) -- "127.0.0.1:8000<br/>X-API-Key" --> A
     A --> PG[(PostgreSQL<br/>volume)]
@@ -20,10 +20,10 @@ PostgreSQL and Qdrant have no published ports.
 |---|---|
 | `APP_ENV=production` refuses to start without `ADMIN_API_KEY` and both rate limits | `app/config.py` |
 | Writes (`/jobs/import`, `/search/index`) need `X-API-Key` | `app/security.py` |
-| Demo password; no shared chat history; API URL fixed (`DEMO_PUBLIC=true`) | `demo/app.py` |
-| CV upload ≤ 5 MB at the proxy, ≤ 2 MB / 5 pages at the API | Streamlit flags, settings |
+| Chat login (`CHAT_PASSWORD`, the default `admin` is refused in production); whoever logs in is the admin and can import/index | `chat/app.py` |
+| Upload ≤ 2 MB in the chat (`chat/.chainlit/config.toml`), ≤ 2 MB / 5 pages at the API | Chainlit config, settings |
 
-All visitors reach the API through the demo container, so the per-minute limit acts as a
+All visitors reach the API through the chat container, so the per-minute limit acts as a
 global limit and `PUBLIC_DAILY_LIMIT` caps the daily spend.
 
 ## 1. Server, once

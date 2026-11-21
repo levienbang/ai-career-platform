@@ -24,13 +24,12 @@ from evaluation.judge import (
     human_agreement,
     human_review_started,
     judge_pool,
-    judged_precision_at_k,
-    ndcg_at_k,
     planned_calls,
     sample_pairs,
     silver_agreement,
     truncate_document,
 )
+from evaluation.metrics import judged_precision_at_k, ndcg_at_k
 
 HERE = Path(__file__).parent
 CASES_FILE = HERE / "real_cases.json"

@@ -1,4 +1,4 @@
-from typing import Protocol
+from typing import Literal, Protocol
 
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
@@ -31,6 +31,8 @@ class SearchToolJob(BaseModel):
 class SearchToolResult(BaseModel):
     query: str
     jobs: list[SearchToolJob]
+    reranker: Literal["llm", "cross_encoder", "none"] | None = None
+    reranker_fallback: bool = False
 
 
 class RerankedJobSearchTool:

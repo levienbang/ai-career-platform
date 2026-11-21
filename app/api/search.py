@@ -31,6 +31,7 @@ from app.retrieval.reranker import (
     RerankerResponseError,
     RerankerServiceError,
     build_reranker,
+    reranker_status,
 )
 from app.retrieval.types import SearchHit
 from app.schemas.search import (
@@ -85,12 +86,14 @@ def _search_response(
     request: SearchRequest,
     hits: list[SearchHit],
     started_at: float,
+    **reranker_info: object,
 ) -> SearchResponse:
     return SearchResponse(
         method=method,
         query=request.query,
         latency_ms=(perf_counter() - started_at) * 1000,
         results=[SearchResult.model_validate(hit.__dict__) for hit in hits],
+        **reranker_info,
     )
 
 
@@ -182,7 +185,10 @@ def reranked_search(
         )
     except Exception as error:
         _raise_retrieval_http_error(error)
-    return _search_response("reranked", request, hits, started_at)
+    used, fell_back = reranker_status(reranker, settings)
+    return _search_response(
+        "reranked", request, hits, started_at, reranker=used, reranker_fallback=fell_back
+    )
 
 
 @router.post("/index", response_model=IndexResponse, dependencies=[AdminKey])

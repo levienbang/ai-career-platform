@@ -8,7 +8,7 @@ from app.graph.router import QuestionRouter
 from app.retrieval.embeddings import build_embedding_provider
 from app.retrieval.factory import build_reranked_search_service
 from app.retrieval.qdrant import build_qdrant_client
-from app.retrieval.reranker import build_reranker
+from app.retrieval.reranker import build_reranker, reranker_status
 from app.tools.search_tool import RerankedJobSearchTool, SearchToolResult
 from app.tools.sql_tool import SQLToolResult, build_sql_tool
 from app.tracing import build_agent_callbacks
@@ -39,7 +39,9 @@ class LazyRerankedSearchTool:
             backend = build_reranked_search_service(
                 self.db, embedder, client, reranker, self.settings
             )
-            return RerankedJobSearchTool(backend).invoke(query, limit)
+            result = RerankedJobSearchTool(backend).invoke(query, limit)
+            used, fell_back = reranker_status(reranker, self.settings)
+            return result.model_copy(update={"reranker": used, "reranker_fallback": fell_back})
         finally:
             client.close()
 

@@ -15,17 +15,10 @@ from app.retrieval.reranker import build_reranker
 from app.tools.search_tool import RerankedJobSearchTool
 from app.tools.sql_tool import build_sql_tool
 from evaluation.groundedness import check_agent_result
+from evaluation.metrics import percentile
 
 CASES_FILE = Path(__file__).with_name("agent_cases.json")
 RESULTS_FILE = Path(__file__).with_name("agent_results.json")
-
-
-def percentile(values: list[float], percentile_value: float) -> float:
-    if not values:
-        raise ValueError("At least one latency is required")
-    ordered = sorted(values)
-    index = min(round((len(ordered) - 1) * percentile_value), len(ordered) - 1)
-    return ordered[index]
 
 
 def required_tools_succeeded(result: AgentRunResult, expected_route: str) -> bool:

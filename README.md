@@ -17,7 +17,7 @@ questions in natural language with safe SQL, and scores a CV against every job.
 > **[Job-Data-Engineering-Pipeline](https://github.com/levienbang/Job-Data-Engineering-Pipeline)**
 > (VietJobs dataset + Arbeitnow API → Bronze/Silver/Gold → this platform).
 
-![Streamlit answers an internship job count question with a result table and generated SQL](docs/images/chat-sql.png)
+![The chat answers an internship job count question with a result table and generated SQL](docs/images/chat-sql.png)
 
 *Natural-language analytics with the result table and the SQL used to produce it.*
 
@@ -32,9 +32,9 @@ questions in natural language with safe SQL, and scores a CV against every job.
 | **Drop a CV (PDF)** | Reads the PDF, extracts skills with evidence, ranks jobs by meaning **and** skill fit | Top jobs with matched / missing skills |
 | **Check a skill gap** | Compares your skills with the jobs you picked | Required skills you lack, ranked by demand |
 
-All of it is available through a FastAPI backend (`/docs`) and a **Streamlit chat demo**.
+All of it is available through a FastAPI backend (`/docs`) and a **ChatGPT-style chat (Chainlit)** with admin buttons for stats, skill review, indexing and imports.
 
-![Paraphrased mobile development search returns Android jobs in Streamlit](docs/images/chat-search.png)
+![Paraphrased mobile development search returns Android jobs in the chat](docs/images/chat-search.png)
 
 *A question describing Google’s phone operating system returns Android jobs.*
 
@@ -67,7 +67,7 @@ flowchart LR
         CV --> QD
     end
 
-    U([User · Streamlit chat]) --> AG
+    U([User · Chainlit chat]) --> AG
     U --> CV
 ```
 
@@ -166,11 +166,11 @@ query. `evaluation/evaluate_judge.py` repeats this with an LLM judge at scale.
 - **Fails loudly, recovers safely.** Bounded retries for transient errors only, batch splitting to
   isolate a bad record, resumable indexing, idempotent imports.
 - **Ready for the public internet.** Admin key for writes, per-client and daily limits on routes
-  that spend paid API calls, password-gated demo.
+  that spend paid API calls, password login on the chat.
 - **Evaluation beyond silver labels.** An LLM judge grades pooled (query, job) pairs 0/1/2 for
   judged precision/nDCG and Cohen's kappa against the rule-based labels, with a blind 30-pair human
   sheet; a deterministic groundedness check flags job ids, titles or numbers not in tool results.
-- **391 offline tests** in CI (fake LLM/embeddings, SQLite, in-memory Qdrant) — no keys, no cost.
+- **424 offline tests** in CI (fake LLM/embeddings, SQLite, in-memory Qdrant) — no keys, no cost.
 
 ---
 
@@ -182,14 +182,14 @@ docker compose up --build -d    # API + PostgreSQL + Qdrant
 docker compose exec api python -m scripts.load_demo_jobs   # demo corpus (or import real jobs)
 docker compose exec api python -m scripts.index_jobs
 
-cd demo && uv run streamlit run app.py    # chat UI → http://localhost:8501
+cd chat && cp .env.example .env && uv run chainlit run app.py --port 8502   # → http://localhost:8502, admin / admin
 ```
 
 Optional local models (host machine, not the Docker image):
 
 ```bash
 uv sync --extra rerank --extra ocr                 # torch + sentence-transformers; ocrmac (macOS)
-uv run python -m scripts.download_reranker         # ~2.3 GB bge-reranker-v2-m3, one sample rerank
+# bge-reranker-v2-m3 (~2.3 GB) downloads to the Hugging Face cache on first use
 # .env: RERANKER_PROVIDER=cross_encoder  KEYWORD_TOKENIZER=pyvi  CV_OCR_ENABLED=true
 uv run python -m evaluation.evaluate_real_data      # dry-run; --run compares all retrieval methods
 uv run python -m evaluation.evaluate_judge          # dry-run; --run = 54 DeepSeek calls, then cached
@@ -209,7 +209,7 @@ API docs: <http://localhost:8000/docs>. Real jobs come from the
 | API | FastAPI, Pydantic, SQLAlchemy, Alembic |
 | Data | PostgreSQL 17, Qdrant |
 | AI | DeepSeek (`deepseek-v4-flash`) via LangChain, Google `gemini-embedding-001`, LangGraph, Docling, sqlglot; optional local `BAAI/bge-reranker-v2-m3` (sentence-transformers), pyvi, Apple Vision OCR (ocrmac) |
-| UI | Streamlit |
+| UI | Chainlit (chat history in SQLite) |
 | Ops | Docker Compose, uv, Ruff, Pytest, GitHub Actions |
 
 ## Project layout
@@ -224,7 +224,7 @@ app/
   graph/ tools/  LangGraph agent, SQL and search tools
 scripts/       operations: sync skills, index, learn/review aliases
 evaluation/    labelled cases and evaluation scripts
-demo/          Streamlit chat
+chat/          Chainlit chat UI with admin buttons
 ```
 
 ## Known limitations
@@ -235,9 +235,9 @@ demo/          Streamlit chat
 - The cross-encoder and Mac OCR are optional extras (`uv sync --extra rerank --extra ocr`); the Docker
   image ships neither, so there a scanned CV still fails with "no extractable text".
 - Job expiry is not modelled yet; closed postings stay searchable.
-- Rate limits are in memory (one API process); behind the demo they act as one global limit.
+- Rate limits are in memory (one API process); behind the chat they act as one global limit.
 
 ---
 
 **Deeper details** — settings, design decisions, milestone notes: [docs/REFERENCE.md](docs/REFERENCE.md) ·
-deploy: [docs/DEPLOY.md](docs/DEPLOY.md) · scripts: [scripts/README.md](scripts/README.md) · demo: [demo/README.md](demo/README.md)
+deploy: [docs/DEPLOY.md](docs/DEPLOY.md) · scripts: [scripts/README.md](scripts/README.md) · chat: [chat/README.md](chat/README.md)

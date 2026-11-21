@@ -36,7 +36,7 @@ exposing the API or demo on the Internet.
 | `ADMIN_API_KEY` | empty | When set, `POST /jobs/import` and `POST /search/index` require header `X-API-Key` (401 otherwise). Crawl sends it from `AI_PLATFORM_API_KEY`. |
 | `PUBLIC_RATE_LIMIT_PER_MINUTE` | 0 | Per-client limit for routes that spend DeepSeek or embedding calls: `/agent/query`, `/analytics/query`, `/cv/upload`, `/cv/match`, `/search/semantic`, `/search/hybrid`, `/search/reranked` (429 + `Retry-After`). |
 | `PUBLIC_DAILY_LIMIT` | 0 | Shared daily cap across all clients for the same routes. |
-| `DEMO_PASSWORD` (Streamlit) | empty | Password gate before the chat opens. |
+| `CHAT_PASSWORD` (chat) | `admin` | Login for the Chainlit chat (one account, also the admin). Refused in production. |
 
 Limits are in memory for one API process. Behind a reverse proxy, run uvicorn
 with `--proxy-headers` so the client address is the real visitor, not the proxy.
@@ -103,8 +103,16 @@ Run checks:
 ```bash
 ruff check .
 ruff format --check .
-pytest
+pytest                     # everything
+pytest tests/unit          # pure functions, fakes only: no database, API or Qdrant (~4 s)
+pytest tests/integration   # SQLite session, in-memory Qdrant, FastAPI TestClient, migrations
 ```
+
+`tests/unit` and `tests/integration` share the fakes in `tests/conftest.py` and
+`tests/factories.py`. A file with both kinds of test is split by name, for example
+`tests/unit/test_keyword_tokenizer.py` and `tests/integration/test_keyword_tokenizer.py`.
+Model quality (P@5, nDCG, routing accuracy) is measured separately by the scripts in
+`evaluation/`, not by pytest.
 
 The database URL defaults to local PostgreSQL and can be overridden with
 `DATABASE_URL`.
@@ -307,6 +315,7 @@ HYBRID_CANDIDATE_LIMIT=20
 RRF_K=60
 RERANKER_TIMEOUT_SECONDS=30
 RERANKER_MAX_CANDIDATES=10
+RERANKER_FALLBACK=cross_encoder
 QDRANT_URL=http://qdrant:6333
 QDRANT_COLLECTION=jobs
 ```
@@ -372,12 +381,26 @@ with a stable rank-based tie-break. Raw BM25 and cosine scores are deliberately 
 added because they have unrelated scales. A job returned by both sources receives
 two reciprocal-rank contributions and is emitted only once by `job_id`.
 
-Reranked search sends only the top hybrid candidate pool (20 by default) to the
+Reranked search sends only the top hybrid candidate pool (10 by default) to the
 configured reranker. The response must contain every candidate ID exactly once;
-unknown, missing, or duplicate IDs are rejected. Provider configuration and timeout
-errors return HTTP 503. This strict behavior avoids silently presenting hybrid output
-as if it had been reranked. Reranking can improve top-result ordering, but adds an LLM
-request and therefore substantially increases latency and external API dependency.
+unknown, missing, or duplicate IDs are rejected. Reranking can improve top-result
+ordering, but adds an LLM request and therefore substantially increases latency and
+external API dependency.
+
+When the reranker fails at request time (timeout, provider error, missing or
+duplicate IDs), `RERANKER_FALLBACK` decides what happens:
+
+| Value | Behaviour |
+|---|---|
+| `cross_encoder` (default) | Rerank with the local `RERANKER_MODEL`; if it is not installed or also fails, keep hybrid order |
+| `hybrid` | Keep hybrid order |
+| `none` | Return HTTP 503 (the old strict behaviour) |
+
+The response never passes a fallback off as the configured reranker: `/search/reranked`
+and the agent's `search_result` carry `reranker` (`llm`, `cross_encoder` or `none` for
+hybrid order) and `reranker_fallback`. The local model is loaded on the first fallback
+(about 15 s on an M1), not at startup, because fallbacks are rare. Configuration errors
+such as a missing `DEEPSEEK_API_KEY` still return 503 so a broken deployment is visible.
 
 Run the labelled 12-query evaluation after seeding and indexing:
 
@@ -461,7 +484,7 @@ docker compose exec api python -m evaluation.evaluate_routing
 ```
 
 This sends only the 12 labelled question strings to the configured agent model and
-writes `evaluation/routing_results.json`.
+writes `evaluation/agent_routing_results.json`.
 
 ## Seed-corpus evaluation
 
@@ -500,7 +523,7 @@ and network access.
 Run the integration path with PostgreSQL and Qdrant running:
 
 ```bash
-docker compose exec -e RUN_DOCKER_E2E=1 api pytest -q tests/test_e2e_pipeline.py
+docker compose exec -e RUN_DOCKER_E2E=1 api pytest -q tests/integration/test_e2e_pipeline.py
 ```
 
 It imports a synthetic job, indexes it in an isolated Qdrant collection, routes a
@@ -541,13 +564,11 @@ role, and the five error cases passed. These timings exclude provider/network
 latency. An import-to-answer integration test passed against PostgreSQL and
 Qdrant, with fake extraction, routing, embedding, and reranking.
 
-The live model smoke test routed 0/3 synthetic questions: one provider HTTP 503,
-one timeout, and one provider error. No current live retrieval or full agent
-quality metric is available because `EMBEDDING_API_KEY` is not configured. The
-saved `evaluation/retrieval_results.json` and `evaluation/routing_results.json`
-are earlier runs and were not reproduced in this audit. Remote LangSmith tracing
-and live CV extraction also remain unverified. A [sanitized local trace](../evaluation/agent_trace_example.json)
-records one complete fake-model search run on real PostgreSQL and Qdrant.
+These are Milestone 7 numbers on the 12-job seed corpus with fake models. Live-model
+results on the real crawled jobs (DeepSeek routing 12/12, exact SQL answers, retrieval
+and reranker comparisons) are in `evaluation/real_results.json`, the README results
+table and `docs/RERANKER_REPORT.md`. To see an agent run step by step, enable LangSmith
+tracing (`LANGSMITH_TRACING=true`) or expand the steps shown in the chat UI.
 
 ## Skill maintenance (Milestone 12)
 

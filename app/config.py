@@ -54,6 +54,10 @@ class Settings(BaseSettings):
     reranker_max_retries: int = Field(default=1, ge=0, le=5)
     reranker_max_candidates: int = Field(default=10, ge=2, le=50)
     reranker_provider: Literal["llm", "cross_encoder"] = "llm"
+    # When the primary reranker fails at request time (timeout, bad or missing IDs):
+    # cross_encoder tries the local model, then keeps hybrid order; hybrid keeps hybrid
+    # order; none returns the error (HTTP 503). Configuration errors always surface.
+    reranker_fallback: Literal["cross_encoder", "hybrid", "none"] = "cross_encoder"
     reranker_model: str = "BAAI/bge-reranker-v2-m3"
     reranker_max_length: int = Field(default=512, ge=64, le=8192)
     reranker_batch_size: int = Field(default=8, ge=1, le=64)
