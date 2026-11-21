@@ -30,6 +30,8 @@ from app.retrieval.reranker import (
     RerankedSearchService,
 )
 from app.tools.sql_tool import build_sql_tool
+from evaluation.evaluate_routing import score_routing
+from evaluation.metrics import mrr_at_k, precision_at_k
 
 CASES_FILE = Path(__file__).with_name("real_cases.json")
 RESULTS_FILE = Path(__file__).with_name("real_results.json")
@@ -55,44 +57,6 @@ class CachedQueryEmbedder:
             self.calls += 1
             self._cache[text] = self.provider.embed_query(text)
         return self._cache[text]
-
-
-def precision_at_k(ids: list[int], relevant: set[int], k: int) -> float:
-    return len([job_id for job_id in ids[:k] if job_id in relevant]) / k
-
-
-def mrr_at_k(ids: list[int], relevant: set[int], k: int) -> float:
-    for rank, job_id in enumerate(ids[:k], start=1):
-        if job_id in relevant:
-            return 1 / rank
-    return 0.0
-
-
-def evaluate_routing(settings: Settings, cases: list[dict]) -> dict:
-    router = build_question_router(settings)
-    rows = []
-    for case in cases:
-        started = perf_counter()
-        try:
-            route, error = router.decide(case["question"]).route, None
-        except Exception as exc:  # report, do not stop the whole evaluation
-            route, error = None, type(exc).__name__
-        rows.append(
-            {
-                "question": case["question"],
-                "expected_route": case["expected_route"],
-                "actual_route": route,
-                "correct": route == case["expected_route"],
-                "latency_ms": round((perf_counter() - started) * 1000),
-                "error": error,
-            }
-        )
-    latencies = [row["latency_ms"] for row in rows]
-    return {
-        "accuracy": mean(row["correct"] for row in rows),
-        "median_latency_ms": median(latencies),
-        "cases": rows,
-    }
 
 
 def _sql_correct(case: dict, rows: list[list]) -> bool:
@@ -245,7 +209,7 @@ def main() -> None:
     results = json.loads(RESULTS_FILE.read_text(encoding="utf-8")) if RESULTS_FILE.exists() else {}
     results.update(corpus=cases["corpus"], model=settings.deepseek_model)
     if "routing" in args.only:
-        results["routing"] = evaluate_routing(settings, cases["routing"])
+        results["routing"] = score_routing(build_question_router(settings), cases["routing"])
     if "sql" in args.only:
         results["sql"] = evaluate_sql(settings, cases["sql"])
     rerankers = (

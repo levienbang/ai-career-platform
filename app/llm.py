@@ -65,3 +65,33 @@ def build_structured_chat_model(
             schema, method=settings.deepseek_structured_output_method, include_raw=include_raw
         ),
     )
+
+
+class LLMCheckResult(BaseModel):
+    ok: bool
+    language: str
+
+
+def check_structured_output(settings: Settings) -> tuple[str, LLMCheckResult]:
+    """Send one small structured-output request; returns (model name, parsed result).
+
+    Used by scripts/check_deepseek.py and the admin "check LLM" button. It spends one
+    paid request, so nothing calls it automatically.
+    """
+    from langchain_core.prompts import ChatPromptTemplate
+
+    selected = build_structured_chat_model(
+        settings, LLMCheckResult, timeout_seconds=settings.llm_timeout_seconds, max_retries=0
+    )
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "Return ok=true and language='English'."
+                + structured_output_guidance(settings, LLMCheckResult),
+            ),
+            ("human", "Check structured output."),
+        ]
+    )
+    result = LLMCheckResult.model_validate(selected.runnable.invoke(prompt.invoke({})))
+    return selected.model, result

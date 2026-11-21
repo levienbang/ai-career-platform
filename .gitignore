@@ -31,3 +31,9 @@ docs/PROJECT_SPEC.md
 docs/CURRENT_MILESTONE.md
 docs/PORTFOLIO_RELEASE.md
 docs/milestones/
+# Chainlit chat: uploaded files and generated UI translations
+chat/.files/
+chat/.chainlit/translations/
+
+# Chainlit chat history (SQLite)
+chat/.chats.db

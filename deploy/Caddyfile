@@ -1,5 +1,5 @@
-# Automatic HTTPS (Let's Encrypt) for $DOMAIN; Streamlit's websocket is proxied as is.
+# Automatic HTTPS (Let's Encrypt) for $DOMAIN; Chainlit's websocket is proxied as is.
 {$DOMAIN} {
 	encode gzip
-	reverse_proxy demo:8501
+	reverse_proxy chat:8000
 }

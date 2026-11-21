@@ -1,5 +1,5 @@
 # Production stack for one small VPS. Only Caddy is reachable from the internet:
-#   https://$DOMAIN  -> Streamlit demo (password gate) -> API on the private network
+#   https://$DOMAIN  -> Chainlit chat (password login) -> API on the private network
 # The API is bound to 127.0.0.1 for the job pipeline on the same host and SSH tunnels;
 # PostgreSQL and Qdrant have no published ports at all.
 # Usage: set COMPOSE_FILE=docker-compose.prod.yml in .env, then `docker compose up -d --build`.
@@ -65,13 +65,19 @@ services:
       sh -c "alembic upgrade head &&
       uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1"
 
-  demo:
+  chat:
     <<: *restart
-    build: ./demo
+    build: ./chat
     environment:
+      APP_ENV: production            # refuses the default admin password
       CAREER_API_URL: http://api:8000
-      DEMO_PASSWORD: ${DEMO_PASSWORD:?set DEMO_PASSWORD}
-      DEMO_PUBLIC: "true"
+      # Whoever logs in is the admin: the chat forwards the admin key on admin buttons.
+      CAREER_ADMIN_API_KEY: ${ADMIN_API_KEY:?set ADMIN_API_KEY}
+      CHAT_USERNAME: ${CHAT_USERNAME:-admin}
+      CHAT_PASSWORD: ${CHAT_PASSWORD:?set CHAT_PASSWORD}
+      CHAINLIT_AUTH_SECRET: ${CHAINLIT_AUTH_SECRET:?set CHAINLIT_AUTH_SECRET}
+    volumes:
+      - chat_data:/data
     depends_on:
       api:
         condition: service_healthy
@@ -89,10 +95,11 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - demo
+      - chat
 
 volumes:
   postgres_data:
   qdrant_data:
   caddy_data:
   caddy_config:
+  chat_data:

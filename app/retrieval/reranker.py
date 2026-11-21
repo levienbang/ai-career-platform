@@ -1,6 +1,7 @@
 import json
 import logging
 import threading
+from collections.abc import Callable
 from dataclasses import replace
 from functools import lru_cache
 from typing import Any, Literal, Protocol
@@ -241,7 +242,7 @@ def _load_cross_encoder(model_name: str, max_length: int, device: str | None) ->
     except Exception as error:
         raise RerankerConfigurationError(
             f"Could not load reranker model '{model_name}'; "
-            "run python -m scripts.download_reranker first"
+            "check the model name and network access (first load downloads ~2.3 GB)"
         ) from error
 
 
@@ -294,7 +295,115 @@ class CrossEncoderWarmup:
 cross_encoder_warmup = CrossEncoderWarmup()
 
 
+RerankerName = Literal["llm", "cross_encoder", "none"]
+_RUNTIME_ERRORS = (RerankerServiceError, RerankerResponseError)
+
+
+class FallbackCounter:
+    """Fallbacks since the API process started, keyed by what ran instead (admin stats)."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._counts: dict[str, int] = {}
+
+    def record(self, used: str) -> None:
+        with self._lock:
+            self._counts[used] = self._counts.get(used, 0) + 1
+
+    def snapshot(self) -> dict[str, int]:
+        with self._lock:
+            return dict(self._counts)
+
+    def reset(self) -> None:
+        with self._lock:
+            self._counts.clear()
+
+
+reranker_fallbacks = FallbackCounter()
+
+
+class FallbackJobReranker:
+    """Run the primary reranker; on a runtime failure, try a backup, then keep hybrid order.
+
+    `used` and `fell_back` record what produced the last ranking, so callers can say
+    when results were not reranked by the configured model instead of hiding it.
+    The backup is built lazily: loading the local model costs seconds and memory, and
+    it is only needed when the primary fails.
+    """
+
+    def __init__(
+        self,
+        primary: JobReranker,
+        primary_name: RerankerName,
+        *,
+        backup: Callable[[], JobReranker] | None = None,
+        backup_name: RerankerName = "none",
+    ) -> None:
+        self.primary = primary
+        self.primary_name = primary_name
+        self._backup_factory = backup
+        self._backup: JobReranker | None = None
+        self.backup_name = backup_name
+        self.used: RerankerName = primary_name
+        self.fell_back = False
+
+    def rerank(self, query: str, candidates: list[SearchHit]) -> list[SearchHit]:
+        self.used, self.fell_back = self.primary_name, False
+        try:
+            return self._checked(self.primary, query, candidates)
+        except _RUNTIME_ERRORS as error:
+            # Never log the query or candidate text: they can contain user data.
+            logger.warning(
+                "Reranker %s failed (%s); falling back", self.primary_name, type(error).__name__
+            )
+        self.fell_back = True
+        if self._backup_factory is not None:
+            try:
+                if self._backup is None:
+                    self._backup = self._backup_factory()
+                ranked = self._checked(self._backup, query, candidates)
+                self.used = self.backup_name
+                reranker_fallbacks.record(self.used)
+                return ranked
+            except (RerankerConfigurationError, *_RUNTIME_ERRORS) as error:
+                logger.warning(
+                    "Backup reranker %s failed (%s); keeping hybrid order",
+                    self.backup_name,
+                    type(error).__name__,
+                )
+        self.used = "none"
+        reranker_fallbacks.record(self.used)
+        return list(candidates)
+
+    @staticmethod
+    def _checked(reranker: JobReranker, query: str, candidates: list[SearchHit]) -> list[SearchHit]:
+        ranked = reranker.rerank(query, candidates)
+        validate_reranked_candidates(candidates, ranked)
+        return ranked
+
+
 def build_reranker(settings: Settings) -> JobReranker:
+    primary: JobReranker
     if settings.reranker_provider == "cross_encoder":
-        return CrossEncoderJobReranker(settings)
-    return LangChainJobReranker(settings)
+        primary = CrossEncoderJobReranker(settings)
+    else:
+        primary = LangChainJobReranker(settings)
+    if settings.reranker_fallback == "none":
+        return primary
+    use_local_backup = (
+        settings.reranker_fallback == "cross_encoder"
+        and settings.reranker_provider != "cross_encoder"
+    )
+    return FallbackJobReranker(
+        primary,
+        settings.reranker_provider,
+        backup=(lambda: CrossEncoderJobReranker(settings)) if use_local_backup else None,
+        backup_name="cross_encoder" if use_local_backup else "none",
+    )
+
+
+def reranker_status(reranker: JobReranker, settings: Settings) -> tuple[RerankerName, bool]:
+    """Which reranker produced the last ranking, and whether that was a fallback."""
+    if isinstance(reranker, FallbackJobReranker):
+        return reranker.used, reranker.fell_back
+    return settings.reranker_provider, False

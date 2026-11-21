@@ -25,6 +25,10 @@ class SearchResponse(BaseModel):
     query: str
     latency_ms: float = Field(ge=0)
     results: list[SearchResult]
+    # Reranked search only: the model that ordered the results ("none" = hybrid order)
+    # and whether it was a fallback because the configured reranker failed.
+    reranker: Literal["llm", "cross_encoder", "none"] | None = None
+    reranker_fallback: bool = False
 
 
 class IndexRequest(BaseModel):

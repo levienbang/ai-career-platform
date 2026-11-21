@@ -8,6 +8,7 @@ from qdrant_client import QdrantClient
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.api.admin import router as admin_router
 from app.api.agent import router as agent_router
 from app.api.cv import router as cv_router
 from app.api.jobs import router as jobs_router
@@ -33,6 +34,7 @@ app.include_router(jobs_router)
 app.include_router(search_router)
 app.include_router(agent_router)
 app.include_router(cv_router)
+app.include_router(admin_router)
 
 
 @app.get("/health", tags=["system"])

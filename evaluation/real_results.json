@@ -2,8 +2,11 @@
   "corpus": "941 real Crawl jobs (VietJobs IT + Fake Jobs) in the platform database",
   "model": "deepseek-v4-flash",
   "routing": {
-    "accuracy": 1,
+    "case_count": 12,
+    "accuracy": 1.0,
+    "success_rate": 1.0,
     "median_latency_ms": 749.0,
+    "p95_latency_ms": 1184,
     "cases": [
       {
         "question": "Tìm job Computer Vision phù hợp fresher biết Python",
@@ -186,37 +189,37 @@
     "keyword": {
       "precision_at_5": 0.96,
       "mrr_at_10": 1.0,
-      "median_latency_ms": 359.2
+      "median_latency_ms": 366.9
     },
     "keyword_pyvi": {
       "precision_at_5": 0.96,
       "mrr_at_10": 1.0,
-      "median_latency_ms": 267.9
+      "median_latency_ms": 272.7
     },
     "dense": {
       "precision_at_5": 1.0,
       "mrr_at_10": 1.0,
-      "median_latency_ms": 599.4
+      "median_latency_ms": 593.7
     },
     "hybrid": {
       "precision_at_5": 1.0,
       "mrr_at_10": 1.0,
-      "median_latency_ms": 298.4
+      "median_latency_ms": 309.7
     },
     "hybrid_pyvi": {
       "precision_at_5": 1.0,
       "mrr_at_10": 1.0,
-      "median_latency_ms": 355.2
+      "median_latency_ms": 347.2
     },
     "reranked_cross_encoder": {
       "precision_at_5": 0.96,
       "mrr_at_10": 1.0,
-      "median_latency_ms": 4836.8
+      "median_latency_ms": 4722.0
     },
-    "reranked_cross_encoder_chunked": {
-      "precision_at_5": 0.96,
+    "reranked_llm": {
+      "precision_at_5": 1.0,
       "mrr_at_10": 1.0,
-      "median_latency_ms": 7438.4
+      "median_latency_ms": 2297.5
     },
     "cases": [
       {
@@ -319,18 +322,18 @@
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
-            18,
-            45,
             17,
-            29,
-            9,
-            39,
-            31,
             11,
+            18,
+            31,
+            29,
+            19,
+            25,
+            37,
             12,
-            37
+            9
           ],
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
@@ -436,18 +439,18 @@
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
             177,
             448,
-            450,
             493,
-            620,
-            131,
             168,
             483,
-            226,
-            511
+            511,
+            620,
+            450,
+            618,
+            504
           ],
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
@@ -553,18 +556,18 @@
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
             514,
-            230,
-            460,
             594,
-            200,
-            607,
             624,
+            230,
+            200,
             179,
-            552,
-            223
+            607,
+            460,
+            223,
+            155
           ],
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
@@ -670,18 +673,18 @@
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
             83,
-            79,
-            63,
             65,
+            95,
+            79,
             97,
-            84,
             60,
             64,
-            81,
-            95
+            106,
+            84,
+            86
           ],
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
@@ -787,20 +790,20 @@
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
             58,
             55,
             43,
-            57,
-            512,
-            42,
-            103,
-            691,
+            72,
+            47,
             56,
-            41
+            52,
+            53,
+            49,
+            103
           ],
-          "precision_at_5": 0.8,
+          "precision_at_5": 1.0,
           "mrr_at_10": 1.0
         }
       },
@@ -904,16 +907,16 @@
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
             786,
-            578,
+            692,
+            569,
             350,
-            508,
+            578,
             637,
-            175,
-            161,
-            280,
+            508,
+            798,
             501,
             498
           ],
@@ -1021,18 +1024,18 @@
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
             164,
-            131,
-            573,
-            492,
             432,
+            573,
             326,
+            544,
+            600,
             985,
-            196,
-            193,
-            600
+            1081,
+            131,
+            492
           ],
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
@@ -1138,18 +1141,18 @@
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
             257,
             419,
-            619,
-            421,
-            319,
             336,
+            619,
             422,
-            196,
-            193,
-            492
+            487,
+            421,
+            341,
+            715,
+            196
           ],
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
@@ -1255,17 +1258,17 @@
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
             846,
-            505,
             872,
+            172,
+            850,
+            505,
             545,
             127,
-            850,
-            855,
-            815,
-            836,
+            861,
+            871,
             834
           ],
           "precision_at_5": 1.0,
@@ -1372,20 +1375,20 @@
           "precision_at_5": 0.6,
           "mrr_at_10": 1.0
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
-            29,
-            17,
-            11,
-            451,
-            31,
-            2,
             27,
-            503,
-            25,
-            15
+            2,
+            37,
+            108,
+            17,
+            12,
+            9,
+            29,
+            11,
+            25
           ],
-          "precision_at_5": 0.8,
+          "precision_at_5": 1.0,
           "mrr_at_10": 1.0
         }
       }
@@ -1395,37 +1398,37 @@
     "keyword": {
       "precision_at_5": 0.3,
       "mrr_at_10": 0.442,
-      "median_latency_ms": 387.2
+      "median_latency_ms": 379.1
     },
     "keyword_pyvi": {
       "precision_at_5": 0.38,
       "mrr_at_10": 0.659,
-      "median_latency_ms": 212.4
+      "median_latency_ms": 208.9
     },
     "dense": {
       "precision_at_5": 0.88,
       "mrr_at_10": 1.0,
-      "median_latency_ms": 584.2
+      "median_latency_ms": 554.1
     },
     "hybrid": {
       "precision_at_5": 0.74,
       "mrr_at_10": 1.0,
-      "median_latency_ms": 354.0
+      "median_latency_ms": 372.3
     },
     "hybrid_pyvi": {
       "precision_at_5": 0.7,
       "mrr_at_10": 1.0,
-      "median_latency_ms": 354.2
+      "median_latency_ms": 347.6
     },
     "reranked_cross_encoder": {
       "precision_at_5": 0.8,
       "mrr_at_10": 0.933,
-      "median_latency_ms": 4759.7
+      "median_latency_ms": 4695.6
     },
-    "reranked_cross_encoder_chunked": {
-      "precision_at_5": 0.76,
-      "mrr_at_10": 0.933,
-      "median_latency_ms": 7929.7
+    "reranked_llm": {
+      "precision_at_5": 0.96,
+      "mrr_at_10": 1.0,
+      "median_latency_ms": 2502.2
     },
     "cases": [
       {
@@ -1528,21 +1531,21 @@
           "precision_at_5": 0.4,
           "mrr_at_10": 0.333
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
-            69,
-            68,
-            45,
-            67,
-            90,
-            118,
             18,
             17,
-            115,
-            113
+            11,
+            39,
+            2,
+            67,
+            68,
+            69,
+            45,
+            90
           ],
-          "precision_at_5": 0.4,
-          "mrr_at_10": 0.333
+          "precision_at_5": 0.8,
+          "mrr_at_10": 1.0
         }
       },
       {
@@ -1645,18 +1648,18 @@
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
-            565,
+            504,
             511,
             448,
-            504,
+            718,
+            226,
+            565,
             131,
+            492,
             289,
-            596,
-            747,
-            196,
-            193
+            421
           ],
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
@@ -1762,20 +1765,20 @@
           "precision_at_5": 0.4,
           "mrr_at_10": 1.0
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
-            153,
-            503,
-            457,
-            522,
-            460,
-            536,
-            514,
+            624,
             594,
+            179,
+            514,
             200,
-            241
+            223,
+            153,
+            460,
+            459,
+            536
           ],
-          "precision_at_5": 0.4,
+          "precision_at_5": 1.0,
           "mrr_at_10": 1.0
         }
       },
@@ -1879,20 +1882,20 @@
           "precision_at_5": 0.8,
           "mrr_at_10": 1.0
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
             63,
-            35,
             83,
-            106,
-            924,
-            84,
             64,
-            86,
+            65,
+            95,
             60,
-            178
+            106,
+            84,
+            86,
+            94
           ],
-          "precision_at_5": 0.6,
+          "precision_at_5": 1.0,
           "mrr_at_10": 1.0
         }
       },
@@ -1996,18 +1999,18 @@
           "precision_at_5": 0.8,
           "mrr_at_10": 1.0
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
-            52,
-            53,
-            59,
             49,
-            155,
-            124,
-            41,
-            48,
             43,
-            54
+            58,
+            103,
+            42,
+            124,
+            56,
+            48,
+            54,
+            59
           ],
           "precision_at_5": 0.8,
           "mrr_at_10": 1.0
@@ -2113,20 +2116,20 @@
           "precision_at_5": 0.8,
           "mrr_at_10": 1.0
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
-            569,
             578,
+            350,
+            22,
+            569,
             692,
-            342,
-            103,
-            343,
             318,
+            815,
+            798,
             690,
-            561,
-            806
+            387
           ],
-          "precision_at_5": 0.6,
+          "precision_at_5": 1.0,
           "mrr_at_10": 1.0
         }
       },
@@ -2230,18 +2233,18 @@
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
-            544,
             573,
-            600,
-            131,
             432,
+            326,
+            600,
+            544,
+            164,
             341,
-            526,
-            193,
-            196,
-            164
+            131,
+            492,
+            193
           ],
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
@@ -2347,18 +2350,18 @@
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
-            131,
+            421,
             422,
+            619,
+            336,
+            131,
             492,
             160,
-            421,
-            730,
-            567,
-            619,
             728,
-            478
+            478,
+            730
           ],
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
@@ -2464,18 +2467,18 @@
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
-            850,
-            821,
             846,
-            864,
+            505,
+            850,
+            172,
+            821,
             872,
-            856,
+            864,
             834,
-            837,
             545,
-            855
+            484
           ],
           "precision_at_5": 1.0,
           "mrr_at_10": 1.0
@@ -2581,20 +2584,20 @@
           "precision_at_5": 0.8,
           "mrr_at_10": 1.0
         },
-        "reranked_cross_encoder_chunked": {
+        "reranked_llm": {
           "top10": [
-            31,
             2,
-            17,
-            26,
-            11,
+            37,
             27,
-            5,
-            4,
+            17,
+            31,
+            11,
+            25,
             29,
-            37
+            26,
+            4
           ],
-          "precision_at_5": 0.8,
+          "precision_at_5": 1.0,
           "mrr_at_10": 1.0
         }
       }

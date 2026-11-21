@@ -4,7 +4,6 @@ import json
 import re
 from dataclasses import replace
 from pathlib import Path
-from statistics import mean
 from time import perf_counter
 
 from qdrant_client import QdrantClient
@@ -30,12 +29,13 @@ from app.tools.sql_tool import (
     SQLValidationError,
     _readonly_engine,
 )
-from evaluation.evaluate_agent import percentile, required_tools_succeeded
-from evaluation.evaluate_retrieval import mrr_at_k, recall_at_k
+from evaluation.evaluate_agent import required_tools_succeeded
+from evaluation.evaluate_retrieval import CASES_FILE as RETRIEVAL_CASES_FILE
+from evaluation.evaluate_retrieval import score_retrieval_cases
+from evaluation.metrics import percentile
 
 ROOT = Path(__file__).parent
 CASES_FILE = ROOT / "seed_cases.json"
-RETRIEVAL_CASES_FILE = ROOT / "retrieval_cases.json"
 AGENT_CASES_FILE = ROOT / "agent_cases.json"
 RESULTS_FILE = ROOT / "seed_results.json"
 
@@ -134,32 +134,16 @@ def _retrieval(session, cases: list[dict]) -> tuple[dict, list[float], int]:
     hybrid = HybridSearchService(keyword, dense, candidate_limit=20)
     reranked = RerankedSearchService(hybrid, FixtureReranker(), candidate_limit=20)
     methods = {"keyword": keyword, "dense": dense, "hybrid": hybrid, "reranked": reranked}
-    scores: dict[str, dict[str, list[float]]] = {
-        name: {"recall_at_5": [], "mrr_at_10": [], "latency_ms": []} for name in methods
-    }
-    all_latencies: list[float] = []
-    repository = JobRepository(session)
-    for case in cases:
-        relevant = {job.id for job in repository.get_by_source_urls(case["relevant_source_urls"])}
-        if len(relevant) != len(case["relevant_source_urls"]):
-            raise RuntimeError("Retrieval ground truth jobs are missing; seed the database")
-        for name, method in methods.items():
-            started = perf_counter()
-            ids = [hit.job_id for hit in method.search(case["query"], limit=10)]
-            latency = (perf_counter() - started) * 1000
-            scores[name]["recall_at_5"].append(recall_at_k(ids, relevant, 5))
-            scores[name]["mrr_at_10"].append(mrr_at_k(ids, relevant, 10))
-            scores[name]["latency_ms"].append(latency)
-            all_latencies.append(latency)
+    scores, _ = score_retrieval_cases(JobRepository(session), cases, methods)
     metrics = {
         name: {
-            "recall_at_5": mean(values["recall_at_5"]),
-            "mrr_at_10": mean(values["mrr_at_10"]),
-            "p50_latency_ms": percentile(values["latency_ms"], 0.5),
-            "p95_latency_ms": percentile(values["latency_ms"], 0.95),
+            **score.mean_quality(),
+            "p50_latency_ms": percentile(score.latencies_ms, 0.5),
+            "p95_latency_ms": percentile(score.latencies_ms, 0.95),
         }
-        for name, values in scores.items()
+        for name, score in scores.items()
     }
+    all_latencies = [latency for score in scores.values() for latency in score.latencies_ms]
     return metrics, all_latencies, indexed
 
 

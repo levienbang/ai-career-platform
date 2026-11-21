@@ -1,4 +1,4 @@
-"""LLM-as-a-judge for retrieval relevance, plus the metrics used to report it.
+"""LLM-as-a-judge for retrieval relevance, plus judge-vs-label agreement statistics.
 
 The judge grades (query, job search document) pairs on a 0/1/2 scale. Judgments are
 cached per (query, job_id) together with a hash of the exact document sent and the
@@ -254,21 +254,7 @@ def judge_pool(
     return stats
 
 
-# --- metrics ---------------------------------------------------------------
-
-
-def judged_precision_at_k(grades: Sequence[int], k: int, *, threshold: int = 2) -> float:
-    return sum(grade >= threshold for grade in grades[:k]) / k
-
-
-def dcg(grades: Sequence[int]) -> float:
-    return sum((2**grade - 1) / math.log2(rank + 1) for rank, grade in enumerate(grades, start=1))
-
-
-def ndcg_at_k(ranked_grades: Sequence[int], pool_grades: Sequence[int], k: int) -> float:
-    """nDCG with gains 2^grade - 1; the ideal ranking is the best k of the judged pool."""
-    ideal = dcg(sorted(pool_grades, reverse=True)[:k])
-    return 0.0 if ideal == 0 else dcg(ranked_grades[:k]) / ideal
+# --- agreement -------------------------------------------------------------
 
 
 def cohen_kappa(first: Sequence[Any], second: Sequence[Any]) -> float | None:

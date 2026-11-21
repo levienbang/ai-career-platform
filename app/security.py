@@ -71,6 +71,10 @@ class PaidCallLimiter:
             self._day_count += 1
             return None
 
+    def calls_today(self) -> int:
+        with self._lock:
+            return self._day_count if self._day == self._today() else 0
+
     def reset(self) -> None:
         with self._lock:
             self._recent.clear()

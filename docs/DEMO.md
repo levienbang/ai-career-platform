@@ -1,4 +1,4 @@
-# Demo (dữ liệu thật + Streamlit)
+# Demo (dữ liệu thật + chat Chainlit)
 
 ## Chuẩn bị
 
@@ -7,10 +7,12 @@ and CV matching" và "Resumable indexing and skill learning").
 
 ```bash
 docker compose up -d                       # PostgreSQL, Qdrant, API (cổng 8000)
-cd demo && uv run streamlit run app.py     # giao diện chat (cổng 8501)
+cd chat && uv run chainlit run app.py --port 8502   # giao diện chat
 ```
 
-Mở <http://localhost:8501>. Swagger vẫn ở <http://localhost:8000/docs>.
+Mở <http://localhost:8502>, đăng nhập `admin` / `admin`. Swagger vẫn ở
+<http://localhost:8000/docs>. Gõ `admin` (hoặc bấm gợi ý "Quản trị") để hiện các nút quản trị.
+Xem `chat/README.md`.
 
 Đồng bộ danh mục bằng `python -m scripts.sync_skills` trước khi import dữ liệu
 thật. Các file mẫu import nằm ở `data/examples/sample_jobs.json` và `.csv`.
