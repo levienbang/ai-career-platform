@@ -55,6 +55,12 @@ def test_sql_tool_validates_before_execution() -> None:
         "SELECT * FROM jobs",
         "SELECT id FROM jobs FOR UPDATE",
         "WITH removed AS (DELETE FROM jobs RETURNING id) SELECT id FROM removed",
+        "SELECT set_config('statement_timeout', '0', false) FROM jobs",
+        "SELECT pg_read_file('/etc/passwd') FROM jobs",
+        "SELECT version() FROM jobs",
+        "SELECT COUNT(*) FROM jobs, generate_series(1, 100000000)",
+        "SELECT id FROM jobs UNION SELECT id FROM pg_catalog.pg_tables",
+        "SELECT id FROM jobs UNION SELECT pg_sleep(1) FROM jobs",
     ],
 )
 def test_sql_validator_rejects_unsafe_queries(sql: str) -> None:
@@ -176,3 +182,39 @@ def test_sql_validator_still_rejects_unsafe_function_inside_and() -> None:
         SQLSafetyValidator().validate(
             "SELECT j.id FROM jobs AS j WHERE j.id > 0 AND pg_sleep(1) IS NULL"
         )
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "SELECT COUNT(CASE WHEN lower(location) LIKE '%remote%' THEN 1 END) FROM jobs",
+        "SELECT COUNT(*) FROM jobs AS j WHERE EXISTS "
+        "(SELECT 1 FROM job_skills AS js WHERE js.job_id = j.id)",
+        "SELECT trim(location), COUNT(*) FROM jobs GROUP BY trim(location)",
+        "SELECT AVG(length(title)) FROM jobs",
+        "SELECT GREATEST(experience_years_min, 0), ABS(experience_years_min) FROM jobs",
+        "SELECT location, COUNT(*), RANK() OVER (ORDER BY COUNT(*) DESC) FROM jobs "
+        "GROUP BY location",
+        "SELECT title, ROW_NUMBER() OVER (PARTITION BY location ORDER BY ingested_at DESC) "
+        "FROM jobs",
+        "SELECT location, string_agg(title, ', ') FROM jobs GROUP BY location",
+        "SELECT COUNT(*) FROM jobs WHERE ingested_at > now() - interval '7 days'",
+        "SELECT COUNT(*) FROM jobs WHERE title ~* 'python'",
+        "SELECT split_part(location, ',', 1), COUNT(*) FROM jobs GROUP BY 1",
+        "SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY experience_years_min) FROM jobs",
+        "SELECT to_char(ingested_at, 'YYYY-MM'), COUNT(*) FROM jobs GROUP BY 1",
+        "SELECT 'remote' AS k, COUNT(*) FROM jobs WHERE location ILIKE '%remote%' "
+        "UNION ALL SELECT 'all', COUNT(*) FROM jobs",
+    ],
+)
+def test_sql_validator_allows_common_read_only_analytics(sql: str) -> None:
+    assert SQLSafetyValidator().validate(sql).endswith("LIMIT 100")
+
+
+def test_union_is_capped_and_scoped_to_search_results() -> None:
+    validated = SQLSafetyValidator(max_rows=10).validate(
+        "SELECT id FROM jobs UNION SELECT job_id FROM job_skills LIMIT 500", job_ids=[3, 4]
+    )
+
+    assert validated.endswith("LIMIT 10")
+    assert validated.count("IN (3, 4)") == 2

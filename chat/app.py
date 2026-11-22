@@ -3,7 +3,8 @@
 Local use: one login (admin / admin by default) that is also the admin. Set
 CHAT_PASSWORD before exposing it; APP_ENV=production refuses the default.
 
-- Text goes to POST /agent/query with the last turns folded in (context.py).
+- Text goes to POST /agent/chat with the last turns as plain text (context.py): the
+  chat model answers directly or calls the agent (router -> SQL / search) for data.
 - Attach a PDF to match a CV (/cv/match, then a skill-gap button for /cv/upload).
 - Attach a .json/.csv job file to import it (/jobs/import).
 - Admin buttons run at once (stats, skill review, index, LLM check); type "admin" to
@@ -18,7 +19,7 @@ import api
 import chainlit as cl
 import history
 import render
-from context import build_query
+from context import chat_history
 
 USERNAME = os.getenv("CHAT_USERNAME", "admin")
 PASSWORD = os.getenv("CHAT_PASSWORD", "admin")
@@ -26,7 +27,7 @@ if os.getenv("APP_ENV") == "production" and PASSWORD == "admin":
     raise RuntimeError("Set CHAT_PASSWORD: the default admin password is for local use only")
 REVIEW_PAGE = 10
 GAP_TOP = 5
-HISTORY_TURNS = 10
+HISTORY_TURNS = 400  # the API trims to its token budget
 MENU_WORDS = {"admin", "menu", "quản trị", "quan tri"}
 
 
@@ -86,7 +87,7 @@ async def resume(thread: dict) -> None:
         if step.get("type") == "user_message":
             turns.append({"role": "user", "kind": "text", "content": step.get("output", "")})
         elif step.get("type") == "assistant_message" and step.get("output"):
-            turns.append({"role": "assistant", "kind": "text", "content": step["output"][:300]})
+            turns.append({"role": "assistant", "kind": "text", "content": step["output"][:8000]})
     cl.user_session.set("history", turns[-HISTORY_TURNS:])
 
 
@@ -122,20 +123,21 @@ async def on_message(message: cl.Message) -> None:
 
 
 async def _ask_agent(text: str) -> None:
-    query = build_query(text, cl.user_session.get("history") or [])
-    async with cl.Step(name="Agent", type="tool") as step:
-        step.input = query
-        data, error = await api.ask_agent(query)
-        if data:
-            step.output = f"route: {data.get('route')} · {data.get('latency_ms', 0) / 1000:.1f}s"
+    history = chat_history(cl.user_session.get("history") or [])
+    data, error = await api.chat(text, history)
     if error:
         await _say(f"❌ {error}")
         return
-    if data.get("sql_result"):
-        async with cl.Step(name="SQL do LLM viết", type="tool", language="sql") as step:
-            step.output = data["sql_result"]["sql"]
-    await _say(render.agent_answer(data))
-    _remember(text, {"role": "assistant", "kind": "agent", "data": data})
+    # One step per data lookup the chat model made, so the routing stays visible.
+    for run in data.get("tool_runs") or []:
+        async with cl.Step(name="Tra dữ liệu", type="tool") as step:
+            step.input = run["question"]
+            step.output = f"route: {run['route']} · {run.get('latency_ms', 0) / 1000:.1f}s"
+        if run.get("sql_result"):
+            async with cl.Step(name="SQL do LLM viết", type="tool", language="sql") as step:
+                step.output = run["sql_result"]["sql"]
+    await _say(render.chat_answer(data))
+    _remember(text, {"role": "assistant", "kind": "chat", "data": data})
 
 
 async def _match_cv(pdf, text: str) -> None:

@@ -181,6 +181,12 @@ def main() -> None:
     parser.add_argument("--only", nargs="+", choices=SECTIONS, default=list(SECTIONS))
     parser.add_argument("--rescore", action="store_true", help="Re-grade saved SQL answers")
     parser.add_argument(
+        "--results",
+        type=Path,
+        default=RESULTS_FILE,
+        help="Where to save (e.g. real_results_nova.json to keep the DeepSeek results)",
+    )
+    parser.add_argument(
         "--rerankers",
         nargs="*",
         choices=tuple(RERANKERS),
@@ -206,8 +212,12 @@ def main() -> None:
         return
     settings = Settings()
     embedder = CachedQueryEmbedder(build_embedding_provider(settings))
-    results = json.loads(RESULTS_FILE.read_text(encoding="utf-8")) if RESULTS_FILE.exists() else {}
-    results.update(corpus=cases["corpus"], model=settings.deepseek_model)
+    results_file = args.results
+    results = json.loads(results_file.read_text(encoding="utf-8")) if results_file.exists() else {}
+    model = (
+        settings.bedrock_model if settings.llm_provider == "bedrock" else settings.deepseek_model
+    )
+    results.update(corpus=cases["corpus"], model=model)
     if "routing" in args.only:
         results["routing"] = score_routing(build_question_router(settings), cases["routing"])
     if "sql" in args.only:
@@ -217,7 +227,7 @@ def main() -> None:
     )
     for name in retrieval_sections:
         results[name] = evaluate_retrieval(settings, cases[name], embedder, rerankers)
-    RESULTS_FILE.write_text(json.dumps(results, ensure_ascii=False, indent=2) + "\n")
+    results_file.write_text(json.dumps(results, ensure_ascii=False, indent=2) + "\n")
     summary = {
         "routing_accuracy": results.get("routing", {}).get("accuracy"),
         "sql_accuracy": results.get("sql", {}).get("accuracy"),
@@ -229,7 +239,7 @@ def main() -> None:
         "embedding_calls_this_run": embedder.calls,
     }
     print(json.dumps(summary, ensure_ascii=False, indent=2))
-    print(f"Saved {RESULTS_FILE.name}")
+    print(f"Saved {results_file.name}")
 
 
 if __name__ == "__main__":

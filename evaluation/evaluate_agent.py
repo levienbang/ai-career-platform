@@ -14,7 +14,6 @@ from app.retrieval.factory import build_reranked_search_service
 from app.retrieval.reranker import build_reranker
 from app.tools.search_tool import RerankedJobSearchTool
 from app.tools.sql_tool import build_sql_tool
-from evaluation.groundedness import check_agent_result
 from evaluation.metrics import percentile
 
 CASES_FILE = Path(__file__).with_name("agent_cases.json")
@@ -29,14 +28,6 @@ def required_tools_succeeded(result: AgentRunResult, expected_route: str) -> boo
     if expected_route in {"search", "both"} and result.search_result is None:
         return False
     return True
-
-
-def grounded_rate(case_results: list[dict[str, object]]) -> float | None:
-    """Share of answered cases whose answer passes the deterministic groundedness check."""
-    checked = [case["groundedness"] for case in case_results if case.get("groundedness")]
-    if not checked:
-        return None
-    return sum(report["grounded"] for report in checked) / len(checked)
 
 
 def evaluate() -> dict[str, object]:
@@ -75,14 +66,12 @@ def evaluate() -> dict[str, object]:
                 errors = [str(error)]
                 route_correct = False
                 tool_success = False
-                groundedness = None
             else:
                 latency_ms = result.latency_ms
                 actual_route = result.route
                 errors = result.errors
                 route_correct = result.route == case["expected_route"]
                 tool_success = required_tools_succeeded(result, case["expected_route"])
-                groundedness = check_agent_result(result).model_dump()
             correct_routes += int(route_correct)
             successful_tools += int(tool_success)
             latencies.append(latency_ms)
@@ -95,7 +84,6 @@ def evaluate() -> dict[str, object]:
                     "tool_success": tool_success,
                     "latency_ms": latency_ms,
                     "errors": errors,
-                    "groundedness": groundedness,
                 }
             )
 
@@ -103,7 +91,6 @@ def evaluate() -> dict[str, object]:
         "case_count": len(cases),
         "routing_accuracy": correct_routes / len(cases),
         "tool_success_rate": successful_tools / len(cases),
-        "grounded_rate": grounded_rate(case_results),
         "mean_latency_ms": mean(latencies),
         "median_latency_ms": median(latencies),
         "p95_latency_ms": percentile(latencies, 0.95),

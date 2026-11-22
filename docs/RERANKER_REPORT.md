@@ -78,3 +78,40 @@ Twenty candidates help a little, mostly on par-08: the right Android jobs sit at
 - Computing only the last-token logits (`logits_to_keep=1`) cut peak memory from 12.5 GB to 3.4 GB for 0.6B, with identical rankings.
 - Documents were truncated to about 1024 tokens, which affected 5 of the 100 prompts.
 - Batch sizes were 10 for 0.6B and 2 for 4B, in fp16 on MPS. Loading 4B took 57 s, and the warm-up query took 82 s.
+
+## Backup model: Qwen3 235B on Amazon Bedrock (2026-11-22)
+
+DeepSeek stays the primary model. `qwen.qwen3-235b-a22b-2507`, called through Bedrock's
+OpenAI-compatible Mantle API, is the backup when a DeepSeek call fails. Both models were
+run on the same inputs on the same day.
+
+**Reranking** (`evaluation/evaluate_rerank_pools.py`, the 10 paraphrase pools above, all
+10 queries; job 56 on par-05 was graded 2 because Qwen and DeepSeek both ranked it):
+
+| Model | nDCG@5 | P@5 (=2) | P@5 (≥1) | Median latency | Failed queries |
+|---|---|---|---|---|---|
+| hybrid order | 0.666 | 0.52 | 0.82 | – | – |
+| DeepSeek `deepseek-v4-flash` | 0.856 | 0.72 | 0.90 | 1.3 s | 0 |
+| Qwen3 235B (Bedrock) | **0.866** | **0.74** | 0.90 | 3.3 s | 0 |
+
+DeepSeek returned valid IDs on all 10 queries this time (it failed on 2 in the earlier run).
+
+**Routing** (12 real cases): both 12/12. Median / p95 latency: Qwen 0.64 s / 0.92 s,
+DeepSeek 0.75 s / 1.18 s.
+
+**SQL** (5 real cases, run on the current 1081-job database). The saved answers were
+written when the database held 941 jobs, so both models score 2/5 against them; the
+table compares the two models' results instead:
+
+| Case | DeepSeek | Qwen | Note |
+|---|---|---|---|
+| total jobs | 1081 | 1081 | same |
+| jobs with Python | 314 | **0** | Qwen matched `canonical_name = 'python'` in lower case |
+| internships | 47 | 46 | DeepSeek also checks `employment_type` and "trainee" |
+| jobs in Đà Nẵng | 14 | 14 | same |
+| most common skill | Python (309) | Python (309) | same |
+
+**Conclusion:** Qwen reranks as well as DeepSeek and routes as well, at about 2.5×
+the rerank latency. It writes weaker SQL (one wrong count from case-sensitive
+matching), which is acceptable for a backup that only runs when DeepSeek is down.
+The SQL answer key needs refreshing for the larger database.

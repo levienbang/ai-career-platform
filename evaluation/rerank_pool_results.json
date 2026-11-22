@@ -1,0 +1,727 @@
+{
+  "hybrid": {
+    "summary": {
+      "ndcg_at_5": 0.666,
+      "p_at_5_relevant": 0.52,
+      "p_at_5_partial": 0.82,
+      "errors": 0,
+      "ungraded": 0
+    },
+    "cases": [
+      {
+        "id": "par-01",
+        "top5": [
+          18,
+          17,
+          67,
+          11,
+          68
+        ],
+        "grades": [
+          2,
+          2,
+          1,
+          2,
+          1
+        ],
+        "ndcg_at_5": 0.799,
+        "p_at_5_relevant": 0.6,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": null,
+        "error": null
+      },
+      {
+        "id": "par-02",
+        "top5": [
+          131,
+          504,
+          448,
+          257,
+          421
+        ],
+        "grades": [
+          2,
+          2,
+          2,
+          2,
+          1
+        ],
+        "ndcg_at_5": 0.913,
+        "p_at_5_relevant": 0.8,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": null,
+        "error": null
+      },
+      {
+        "id": "par-03",
+        "top5": [
+          153,
+          522,
+          536,
+          624,
+          480
+        ],
+        "grades": [
+          2,
+          0,
+          1,
+          2,
+          1
+        ],
+        "ndcg_at_5": 0.585,
+        "p_at_5_relevant": 0.4,
+        "p_at_5_partial": 0.8,
+        "ungraded": [],
+        "latency_ms": null,
+        "error": null
+      },
+      {
+        "id": "par-04",
+        "top5": [
+          63,
+          83,
+          178,
+          98,
+          84
+        ],
+        "grades": [
+          2,
+          2,
+          1,
+          0,
+          1
+        ],
+        "ndcg_at_5": 0.653,
+        "p_at_5_relevant": 0.4,
+        "p_at_5_partial": 0.8,
+        "ungraded": [],
+        "latency_ms": null,
+        "error": null
+      },
+      {
+        "id": "par-05",
+        "top5": [
+          49,
+          59,
+          48,
+          124,
+          53
+        ],
+        "grades": [
+          2,
+          2,
+          2,
+          1,
+          2
+        ],
+        "ndcg_at_5": 0.903,
+        "p_at_5_relevant": 0.8,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": null,
+        "error": null
+      },
+      {
+        "id": "par-06",
+        "top5": [
+          815,
+          578,
+          569,
+          690,
+          692
+        ],
+        "grades": [
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "ndcg_at_5": 1.0,
+        "p_at_5_relevant": 1.0,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": null,
+        "error": null
+      },
+      {
+        "id": "par-07",
+        "top5": [
+          193,
+          196,
+          526,
+          747,
+          164
+        ],
+        "grades": [
+          1,
+          1,
+          1,
+          1,
+          2
+        ],
+        "ndcg_at_5": 0.421,
+        "p_at_5_relevant": 0.2,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": null,
+        "error": null
+      },
+      {
+        "id": "par-08",
+        "top5": [
+          730,
+          567,
+          728,
+          478,
+          301
+        ],
+        "grades": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "ndcg_at_5": 0.0,
+        "p_at_5_relevant": 0.0,
+        "p_at_5_partial": 0.0,
+        "ungraded": [],
+        "latency_ms": null,
+        "error": null
+      },
+      {
+        "id": "par-09",
+        "top5": [
+          864,
+          846,
+          484,
+          850,
+          172
+        ],
+        "grades": [
+          1,
+          2,
+          1,
+          1,
+          2
+        ],
+        "ndcg_at_5": 0.617,
+        "p_at_5_relevant": 0.4,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": null,
+        "error": null
+      },
+      {
+        "id": "par-10",
+        "top5": [
+          31,
+          2,
+          409,
+          17,
+          154
+        ],
+        "grades": [
+          2,
+          2,
+          0,
+          2,
+          0
+        ],
+        "ndcg_at_5": 0.766,
+        "p_at_5_relevant": 0.6,
+        "p_at_5_partial": 0.6,
+        "ungraded": [],
+        "latency_ms": null,
+        "error": null
+      }
+    ]
+  },
+  "deepseek-v4-flash": {
+    "summary": {
+      "ndcg_at_5": 0.856,
+      "p_at_5_relevant": 0.72,
+      "p_at_5_partial": 0.9,
+      "median_latency_ms": 1284,
+      "errors": 0,
+      "ungraded": 0
+    },
+    "cases": [
+      {
+        "id": "par-01",
+        "top5": [
+          18,
+          17,
+          11,
+          39,
+          2
+        ],
+        "grades": [
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "ndcg_at_5": 1.0,
+        "p_at_5_relevant": 1.0,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": 1534,
+        "error": null
+      },
+      {
+        "id": "par-02",
+        "top5": [
+          504,
+          511,
+          448,
+          565,
+          131
+        ],
+        "grades": [
+          2,
+          2,
+          2,
+          1,
+          2
+        ],
+        "ndcg_at_5": 0.903,
+        "p_at_5_relevant": 0.8,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": 1026,
+        "error": null
+      },
+      {
+        "id": "par-03",
+        "top5": [
+          624,
+          594,
+          200,
+          153,
+          536
+        ],
+        "grades": [
+          2,
+          2,
+          2,
+          2,
+          1
+        ],
+        "ndcg_at_5": 0.913,
+        "p_at_5_relevant": 0.8,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": 1197,
+        "error": null
+      },
+      {
+        "id": "par-04",
+        "top5": [
+          63,
+          83,
+          64,
+          65,
+          84
+        ],
+        "grades": [
+          2,
+          2,
+          2,
+          2,
+          1
+        ],
+        "ndcg_at_5": 0.913,
+        "p_at_5_relevant": 0.8,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": 1070,
+        "error": null
+      },
+      {
+        "id": "par-05",
+        "top5": [
+          49,
+          103,
+          124,
+          48,
+          56
+        ],
+        "grades": [
+          2,
+          1,
+          1,
+          2,
+          2
+        ],
+        "ndcg_at_5": 0.744,
+        "p_at_5_relevant": 0.6,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": 1410,
+        "error": null
+      },
+      {
+        "id": "par-06",
+        "top5": [
+          578,
+          350,
+          22,
+          569,
+          692
+        ],
+        "grades": [
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "ndcg_at_5": 1.0,
+        "p_at_5_relevant": 1.0,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": 1284,
+        "error": null
+      },
+      {
+        "id": "par-07",
+        "top5": [
+          573,
+          164,
+          544,
+          131,
+          492
+        ],
+        "grades": [
+          2,
+          2,
+          2,
+          1,
+          1
+        ],
+        "ndcg_at_5": 0.815,
+        "p_at_5_relevant": 0.6,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": 1645,
+        "error": null
+      },
+      {
+        "id": "par-08",
+        "top5": [
+          421,
+          728,
+          478,
+          730,
+          567
+        ],
+        "grades": [
+          2,
+          0,
+          0,
+          0,
+          0
+        ],
+        "ndcg_at_5": 0.44,
+        "p_at_5_relevant": 0.2,
+        "p_at_5_partial": 0.2,
+        "ungraded": [],
+        "latency_ms": 1025,
+        "error": null
+      },
+      {
+        "id": "par-09",
+        "top5": [
+          846,
+          505,
+          850,
+          172,
+          872
+        ],
+        "grades": [
+          2,
+          2,
+          1,
+          2,
+          1
+        ],
+        "ndcg_at_5": 0.876,
+        "p_at_5_relevant": 0.6,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": 1558,
+        "error": null
+      },
+      {
+        "id": "par-10",
+        "top5": [
+          2,
+          37,
+          17,
+          31,
+          864
+        ],
+        "grades": [
+          2,
+          2,
+          2,
+          2,
+          0
+        ],
+        "ndcg_at_5": 0.952,
+        "p_at_5_relevant": 0.8,
+        "p_at_5_partial": 0.8,
+        "ungraded": [],
+        "latency_ms": 1096,
+        "error": null
+      }
+    ]
+  },
+  "qwen.qwen3-235b-a22b-2507": {
+    "summary": {
+      "ndcg_at_5": 0.866,
+      "p_at_5_relevant": 0.74,
+      "p_at_5_partial": 0.9,
+      "median_latency_ms": 3348,
+      "errors": 0,
+      "ungraded": 0
+    },
+    "cases": [
+      {
+        "id": "par-01",
+        "top5": [
+          18,
+          11,
+          17,
+          2,
+          39
+        ],
+        "grades": [
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "ndcg_at_5": 1.0,
+        "p_at_5_relevant": 1.0,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": 4445,
+        "error": null
+      },
+      {
+        "id": "par-02",
+        "top5": [
+          504,
+          448,
+          511,
+          131,
+          565
+        ],
+        "grades": [
+          2,
+          2,
+          2,
+          2,
+          1
+        ],
+        "ndcg_at_5": 0.913,
+        "p_at_5_relevant": 0.8,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": 3348,
+        "error": null
+      },
+      {
+        "id": "par-03",
+        "top5": [
+          624,
+          594,
+          153,
+          200,
+          457
+        ],
+        "grades": [
+          2,
+          2,
+          2,
+          2,
+          1
+        ],
+        "ndcg_at_5": 0.913,
+        "p_at_5_relevant": 0.8,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": 3704,
+        "error": null
+      },
+      {
+        "id": "par-04",
+        "top5": [
+          63,
+          84,
+          83,
+          64,
+          65
+        ],
+        "grades": [
+          2,
+          1,
+          2,
+          2,
+          2
+        ],
+        "ndcg_at_5": 0.857,
+        "p_at_5_relevant": 0.8,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": 2107,
+        "error": null
+      },
+      {
+        "id": "par-05",
+        "top5": [
+          49,
+          59,
+          48,
+          103,
+          56
+        ],
+        "grades": [
+          2,
+          2,
+          2,
+          1,
+          2
+        ],
+        "ndcg_at_5": 0.903,
+        "p_at_5_relevant": 0.8,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": 2880,
+        "error": null
+      },
+      {
+        "id": "par-06",
+        "top5": [
+          578,
+          22,
+          569,
+          692,
+          350
+        ],
+        "grades": [
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "ndcg_at_5": 1.0,
+        "p_at_5_relevant": 1.0,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": 3499,
+        "error": null
+      },
+      {
+        "id": "par-07",
+        "top5": [
+          164,
+          573,
+          544,
+          526,
+          747
+        ],
+        "grades": [
+          2,
+          2,
+          2,
+          1,
+          1
+        ],
+        "ndcg_at_5": 0.815,
+        "p_at_5_relevant": 0.6,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": 3389,
+        "error": null
+      },
+      {
+        "id": "par-08",
+        "top5": [
+          421,
+          728,
+          478,
+          730,
+          567
+        ],
+        "grades": [
+          2,
+          0,
+          0,
+          0,
+          0
+        ],
+        "ndcg_at_5": 0.44,
+        "p_at_5_relevant": 0.2,
+        "p_at_5_partial": 0.2,
+        "ungraded": [],
+        "latency_ms": 2983,
+        "error": null
+      },
+      {
+        "id": "par-09",
+        "top5": [
+          846,
+          505,
+          850,
+          872,
+          172
+        ],
+        "grades": [
+          2,
+          2,
+          1,
+          1,
+          2
+        ],
+        "ndcg_at_5": 0.865,
+        "p_at_5_relevant": 0.6,
+        "p_at_5_partial": 1.0,
+        "ungraded": [],
+        "latency_ms": 2789,
+        "error": null
+      },
+      {
+        "id": "par-10",
+        "top5": [
+          2,
+          37,
+          17,
+          31,
+          864
+        ],
+        "grades": [
+          2,
+          2,
+          2,
+          2,
+          0
+        ],
+        "ndcg_at_5": 0.952,
+        "p_at_5_relevant": 0.8,
+        "p_at_5_partial": 0.8,
+        "ungraded": [],
+        "latency_ms": 3307,
+        "error": null
+      }
+    ]
+  }
+}

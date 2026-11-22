@@ -32,6 +32,23 @@ class Settings(BaseSettings):
     deepseek_structured_output_method: Literal["function_calling", "json_mode"] = "function_calling"
     # deepseek-v4-flash thinks by default, and thinking mode rejects forced tool calls.
     deepseek_thinking: Literal["enabled", "disabled"] = "disabled"
+    # Backup chat model when a DeepSeek call fails at runtime (timeout, rate limit, 5xx,
+    # unparseable output): an open model on Amazon Bedrock through its OpenAI-compatible
+    # Mantle API, authenticated with a Bedrock API key.
+    llm_fallback: Literal["none", "bedrock"] = "none"
+    # Model for the conversation in /agent/chat. The agent it calls (router, SQL,
+    # reranker, extraction) keeps LLM_PROVIDER. "bedrock" = Qwen, with DeepSeek as backup.
+    chat_provider: Literal["deepseek", "bedrock"] = "deepseek"
+    # Token budget for one chat model call; the oldest turns are dropped to fit it.
+    chat_context_tokens: int = Field(default=100_000, ge=16_000, le=200_000)
+    # Primary model for the agent's calls. "bedrock" sends them to BEDROCK_MODEL (benchmarks).
+    llm_provider: Literal["deepseek", "bedrock"] = "deepseek"
+    bedrock_model: str = Field(default="qwen.qwen3-235b-a22b-2507", min_length=1)
+    bedrock_region: str = "us-east-1"
+    bedrock_structured_output_method: Literal["function_calling", "json_schema"] = (
+        "function_calling"
+    )
+    aws_bearer_token_bedrock: SecretStr | None = None
     llm_max_retries: int = Field(default=2, ge=0, le=5)
     llm_batch_size: int = Field(default=8, ge=1, le=25)
     llm_requests_per_minute: int = Field(default=0, ge=0, le=1000)

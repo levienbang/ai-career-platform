@@ -215,6 +215,73 @@ All chat and structured extraction calls (job extraction, CV extraction, agent
 router, SQL generator, reranker) use the single `DEEPSEEK_MODEL`. Only embeddings
 use Google. Timeouts and retries still apply per component.
 
+### Chat (`POST /agent/chat`)
+
+The chat UI calls `/agent/chat` with the message and the last turns as plain text
+(`{"message": ..., "history": [{"role": "user"|"assistant", "content": ...}]}`). A chat
+model (`app/graph/chatbot.py`, a small LangGraph loop) either answers directly
+(greetings, what the assistant can do) or calls one tool, `query_job_data`, which runs
+the agent above (`/agent/query`: router → SQL / search) on a standalone question it
+writes itself. It then replies from that result. The response carries `answer`,
+`tool_runs` (each a full agent result, rendered as tables under the reply),
+`warnings`, `llm_calls`, and the context meter: `context_tokens` (prompt tokens of the
+last chat call, as the provider reported them), `context_limit`, `tokens_used` (all chat
+tokens this turn) and `history_dropped`. The chat UI shows it under each reply, for
+example `Ngữ cảnh: 20.1K / 100K token (20%)`.
+
+`CHAT_PROVIDER` picks the chat model separately from the agent: `bedrock` uses Qwen
+with DeepSeek as the backup, `deepseek` (default) the reverse when
+`LLM_FALLBACK=bedrock`. The agent's router, SQL and reranker always follow
+`LLM_PROVIDER` (DeepSeek), so the measured pipeline does not change.
+
+Guards against made-up answers:
+
+| Guard | How |
+|---|---|
+| Data only from this turn | Earlier turns are sent back as text only, so a follow-up question calls the tool again instead of reusing remembered numbers |
+| History by token budget | `CHAT_CONTEXT_TOKENS` (default 100000) per chat model call; 12K is kept free for the system prompt, tool results and the reply, and the oldest turns are dropped to fit (estimated at 3 characters per token). Each turn is capped at 8000 characters |
+| Bounded loop | At most 3 tool calls per turn; then a model without tools must answer |
+| Job IDs checked | A job ID in the reply that is not in this turn's results is listed in `warnings` |
+| Data shown as is | The UI shows the SQL rows and job table from the tool result under the reply |
+| Model failure | If the chat model fails after a lookup, the agent's template answer is returned; before any lookup, 503 |
+
+One chat turn costs one paid-call slot in the limiter but can make several model calls:
+two chat calls plus the agent's router and SQL/rerank calls for a data question.
+
+### Backup model (Qwen on Amazon Bedrock)
+
+```dotenv
+LLM_FALLBACK=bedrock              # default none
+BEDROCK_MODEL=qwen.qwen3-235b-a22b-2507
+BEDROCK_REGION=us-east-1
+BEDROCK_STRUCTURED_OUTPUT_METHOD=function_calling   # or json_schema
+AWS_BEARER_TOKEN_BEDROCK=         # a Bedrock API key
+```
+
+Every structured call above is built in `app/llm.py:build_structured_chat_model`,
+which wraps the DeepSeek runnable with LangChain's `with_fallbacks`. The backup is
+LangChain's `ChatOpenAI` pointed at Bedrock's OpenAI-compatible Mantle API
+(`https://bedrock-mantle.<region>.api.aws/v1`, model list at `GET /v1/models`), with
+`with_structured_output(<schema>)`, so it returns the same Pydantic object and callers
+do not change. It runs only when DeepSeek fails at runtime: connection error or
+timeout, 429, 5xx, or output that does not parse. A bad key, a 400 or a 404 is a
+configuration problem and still fails loudly. With a backup, DeepSeek retries once
+instead of `LLM_MAX_RETRIES` times, so a failing provider is left quickly. The backup
+client is created when the model is built but makes no request until DeepSeek fails.
+
+Fallback order per call:
+
+| Call | Order |
+|---|---|
+| Router, SQL, job/CV extraction, skill learning | DeepSeek → Bedrock |
+| LLM reranker | DeepSeek → Bedrock → local bge → hybrid order |
+
+The admin stats (`GET /admin/stats`, chat **Thống kê**) count backup calls in
+`llm_fallbacks`. The admin **LLM check** tests DeepSeek alone (`fallback=False`).
+`LLM_PROVIDER=bedrock` makes Bedrock the primary model; it exists for benchmarks
+(`evaluation/evaluate_rerank_pools.py`, `evaluate_real_data.py --results ...`), not
+for serving. Set a billing alarm on the AWS account.
+
 `deepseek-v4-flash` runs in thinking mode unless told otherwise, and thinking
 mode rejects the forced tool call that `function_calling` sends (HTTP 400
 "Thinking mode does not support this tool_choice"). `DEEPSEEK_THINKING=disabled`

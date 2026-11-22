@@ -53,13 +53,11 @@ def jobs_table(jobs: list[dict[str, Any]]) -> str:
     )
 
 
-def agent_answer(data: dict[str, Any]) -> str:
-    """Main message body: the answer plus result tables; steps carry the details."""
+def result_tables(run: dict[str, Any]) -> list[str]:
+    """Tables straight from one agent run's tool results (SQL rows, jobs)."""
     parts: list[str] = []
-    for error in data.get("errors") or []:
-        parts.append(f"⚠️ {error}")
-    sql = data.get("sql_result")
-    search = data.get("search_result")
+    sql = run.get("sql_result")
+    search = run.get("search_result")
     if sql and sql.get("rows"):
         rows = [dict(zip(sql["columns"], row, strict=False)) for row in sql["rows"]]
         parts.append(f"**Kết quả thống kê** ({sql['row_count']} dòng)\n\n" + table(rows))
@@ -68,8 +66,42 @@ def agent_answer(data: dict[str, Any]) -> str:
         note = reranker_note(search)
         if note:
             parts.append(f"_{note}_")
-    if not parts or not ((sql and sql.get("rows")) or (search and search.get("jobs"))):
-        parts.insert(0, data.get("answer") or "Không có kết quả.")
+    return parts
+
+
+def _thousands(value: int) -> str:
+    if value < 1000:
+        return str(value)
+    return f"{value / 1000:.1f}".removesuffix(".0") + "K"
+
+
+def context_note(data: dict[str, Any]) -> str:
+    """'Ngữ cảnh: 20.1K / 100K token (20%)', from the provider's own token count."""
+    used, limit = data.get("context_tokens") or 0, data.get("context_limit") or 0
+    if not used or not limit:
+        return ""
+    note = f"Ngữ cảnh: {_thousands(used)} / {_thousands(limit)} token ({used / limit:.0%})"
+    if spent := data.get("tokens_used"):
+        note += f" · lượt này tốn {_thousands(spent)} token"
+    if dropped := data.get("history_dropped"):
+        note += f" · đã bỏ {dropped} tin cũ cho vừa ngữ cảnh"
+    return note
+
+
+def chat_answer(data: dict[str, Any]) -> str:
+    """The chat model's reply, its warnings, then the data it was based on."""
+    parts = [data.get("answer") or "Không có câu trả lời."]
+    parts += [f"⚠️ {warning}" for warning in data.get("warnings") or []]
+    runs = data.get("tool_runs") or []
+    for run in runs:
+        for error in run.get("errors") or []:
+            parts.append(f"⚠️ {error}")
+        tables = result_tables(run)
+        if tables and len(runs) > 1:
+            parts.append(f"---\n_Tra cứu: {run['question']}_")
+        parts += tables
+    if note := context_note(data):
+        parts.append(f"_📊 {note}_")
     return "\n\n".join(parts)
 
 
@@ -123,6 +155,7 @@ def skill_gap(data: dict[str, Any], file_name: str) -> str:
 def admin_stats(data: dict[str, Any]) -> str:
     decisions = data.get("skill_decisions", {})
     fallbacks = data.get("reranker_fallbacks") or {}
+    llm_fallbacks = data.get("llm_fallbacks") or {}
     indexed = data.get("indexed_jobs")
     rows = [
         {"mục": "Job", "giá trị": data["jobs"]},
@@ -136,6 +169,10 @@ def admin_stats(data: dict[str, Any]) -> str:
             "mục": "Reranker fallback (từ lúc API khởi động)",
             "giá trị": ", ".join(f"{RERANKER_LABELS.get(k, k)}: {v}" for k, v in fallbacks.items())
             or 0,
+        },
+        {
+            "mục": "LLM dự phòng (DeepSeek lỗi, từ lúc API khởi động)",
+            "giá trị": ", ".join(f"{k}: {v}" for k, v in llm_fallbacks.items()) or 0,
         },
     ]
     note = ""
