@@ -20,12 +20,12 @@ from app.fallbacks import llm_fallbacks
 
 logger = logging.getLogger(__name__)
 
-# DeepSeek failures worth retrying on another provider. Configuration and request errors
-# (bad key, 400, 404) are not in this list, so they still fail loudly.
+# Any error from the provider's API goes to the backup: a timeout, 429 or 5xx, but also
+# 401/402/403 (a revoked key, no balance left, credit used up), since the other provider
+# can still answer. The failure is logged with its type and counted in the admin stats,
+# so a misconfigured key still shows up. A missing key fails at build time instead.
 FALLBACK_ERRORS: tuple[type[BaseException], ...] = (
-    openai.APIConnectionError,  # includes timeouts
-    openai.RateLimitError,
-    openai.InternalServerError,
+    openai.APIError,  # status errors, connection errors and timeouts
     OutputParserException,
     ValidationError,
 )
@@ -93,7 +93,9 @@ def build_structured_chat_model(
             include_raw=include_raw,
             as_fallback=True,
         )
-        runnable = runnable.with_fallbacks([backup], exceptions_to_handle=FALLBACK_ERRORS)
+        runnable = _logged(runnable, "DeepSeek").with_fallbacks(
+            [backup], exceptions_to_handle=FALLBACK_ERRORS
+        )
     return StructuredChatModel(
         provider="deepseek", model=settings.deepseek_model.strip(), runnable=runnable
     )
@@ -149,10 +151,23 @@ def _bedrock_chat_model(settings: Settings, *, timeout_seconds: float) -> ChatOp
     )
 
 
+def _logged(primary: Runnable, name: str) -> Runnable:
+    """Log why the primary failed (error type only), then let with_fallbacks take over."""
+
+    def run(value: Any, config: Any = None) -> Any:
+        try:
+            return primary.invoke(value, config)
+        except FALLBACK_ERRORS as error:
+            logger.warning("%s call failed (%s); trying the backup", name, type(error).__name__)
+            raise
+
+    return RunnableLambda(run, name=f"{name}_primary")
+
+
 def _record_fallback(runnable: Runnable, used: str = "bedrock") -> Runnable:
     def record(result: Any) -> Any:
         llm_fallbacks.record(used)
-        logger.warning("Primary chat model failed; served by the %s backup", used)
+        logger.warning("Served by the %s backup", used)
         return result
 
     return runnable | RunnableLambda(record, name="record_fallback")
@@ -197,11 +212,15 @@ def build_tool_chat_model(
         if not settings.deepseek_api_key:
             return bedrock()
         backup = _record_fallback(deepseek(has_backup=False), used="deepseek")
-        return bedrock().with_fallbacks([backup], exceptions_to_handle=FALLBACK_ERRORS)
+        return _logged(bedrock(), "Bedrock").with_fallbacks(
+            [backup], exceptions_to_handle=FALLBACK_ERRORS
+        )
     if not _bedrock_backup_enabled(settings):
         return deepseek(has_backup=False)
     backup = _record_fallback(bedrock())
-    return deepseek(has_backup=True).with_fallbacks([backup], exceptions_to_handle=FALLBACK_ERRORS)
+    return _logged(deepseek(has_backup=True), "DeepSeek").with_fallbacks(
+        [backup], exceptions_to_handle=FALLBACK_ERRORS
+    )
 
 
 def bedrock_structured_runnable(

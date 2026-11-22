@@ -115,7 +115,11 @@ def test_chat_history_sends_text_only() -> None:
     context = _load("context")
     messages = [
         {"role": "user", "kind": "text", "content": "Tìm job Python"},
-        {"role": "assistant", "kind": "chat", "data": {"answer": "Có job 12 ở FPT."}},
+        {
+            "role": "assistant",
+            "kind": "chat",
+            "data": {"answer": "Có job 12 ở FPT.", "tool_runs": [{"question": "job Python"}]},
+        },
         {"role": "assistant", "kind": "chat", "error": True, "data": {}},
         {"role": "user", "kind": "text", "content": "x" * 9000},
     ]
@@ -124,7 +128,7 @@ def test_chat_history_sends_text_only() -> None:
 
     assert history[:2] == [
         {"role": "user", "content": "Tìm job Python"},
-        {"role": "assistant", "content": "Có job 12 ở FPT."},
+        {"role": "assistant", "content": "Có job 12 ở FPT.", "lookups": ["job Python"]},
     ]
     assert len(history) == 3
     assert len(history[-1]["content"]) == context.MAX_TURN_CHARS

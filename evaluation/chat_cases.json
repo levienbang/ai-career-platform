@@ -1,0 +1,346 @@
+[
+  {
+    "id": "no-tool-greeting",
+    "message": "chào bạn",
+    "expect_tool": false
+  },
+  {
+    "id": "no-tool-thanks",
+    "history": [
+      {
+        "role": "user",
+        "content": "có bao nhiêu job AI ở Hà Nội?"
+      },
+      {
+        "role": "assistant",
+        "content": "Có 20 job AI ở Hà Nội.",
+        "lookups": [
+          "có bao nhiêu job AI ở Hà Nội?"
+        ]
+      }
+    ],
+    "message": "ok cảm ơn nha",
+    "expect_tool": false
+  },
+  {
+    "id": "no-tool-capabilities",
+    "message": "bạn làm được những gì?",
+    "expect_tool": false
+  },
+  {
+    "id": "no-tool-off-topic",
+    "message": "viết giúp tôi code python in ra hello world",
+    "expect_tool": false
+  },
+  {
+    "id": "direct-count",
+    "message": "có bao nhiêu job Python ở Hồ Chí Minh?",
+    "expect_tool": true,
+    "must_contain": [
+      [
+        "python"
+      ],
+      [
+        "ho chi minh",
+        "hcm",
+        "tp.hcm",
+        "sai gon"
+      ]
+    ]
+  },
+  {
+    "id": "direct-search",
+    "message": "tìm job AI cho fresher",
+    "expect_tool": true,
+    "must_contain": [
+      [
+        "ai"
+      ],
+      [
+        "fresher",
+        "moi ra truong",
+        "0 nam",
+        "khong yeu cau kinh nghiem",
+        "it kinh nghiem"
+      ]
+    ]
+  },
+  {
+    "id": "direct-top-skills",
+    "message": "skill nào được yêu cầu nhiều nhất trong các job data?",
+    "expect_tool": true,
+    "must_contain": [
+      [
+        "skill",
+        "ky nang"
+      ],
+      [
+        "data",
+        "du lieu"
+      ]
+    ]
+  },
+  {
+    "id": "direct-company",
+    "message": "công ty nào tuyển nhiều job backend nhất?",
+    "expect_tool": true,
+    "must_contain": [
+      [
+        "cong ty"
+      ],
+      [
+        "backend"
+      ]
+    ]
+  },
+  {
+    "id": "follow-location",
+    "history": [
+      {
+        "role": "user",
+        "content": "có bao nhiêu job AI ở Hà Nội?"
+      },
+      {
+        "role": "assistant",
+        "content": "Có 20 job AI ở Hà Nội.",
+        "lookups": [
+          "có bao nhiêu job AI ở Hà Nội?"
+        ]
+      }
+    ],
+    "message": "còn ở HCM thì sao?",
+    "expect_tool": true,
+    "must_contain": [
+      [
+        "ai"
+      ],
+      [
+        "ho chi minh",
+        "hcm",
+        "tp.hcm",
+        "sai gon"
+      ]
+    ],
+    "must_not_contain": [
+      "ha noi"
+    ]
+  },
+  {
+    "id": "follow-skill",
+    "history": [
+      {
+        "role": "user",
+        "content": "có bao nhiêu job Java ở Đà Nẵng?"
+      },
+      {
+        "role": "assistant",
+        "content": "Có 6 job Java ở Đà Nẵng.",
+        "lookups": [
+          "có bao nhiêu job Java ở Đà Nẵng?"
+        ]
+      }
+    ],
+    "message": "thế còn Golang?",
+    "expect_tool": true,
+    "must_contain": [
+      [
+        "golang",
+        "go"
+      ],
+      [
+        "da nang"
+      ]
+    ],
+    "must_not_contain": [
+      "java"
+    ]
+  },
+  {
+    "id": "follow-level",
+    "history": [
+      {
+        "role": "user",
+        "content": "tìm job Data Engineer ở Hà Nội"
+      },
+      {
+        "role": "assistant",
+        "content": "Hợp nhất là job 41 (Data Engineer) và job 77 (Big Data Engineer).",
+        "lookups": [
+          "tìm job Data Engineer ở Hà Nội"
+        ]
+      }
+    ],
+    "message": "có cái nào cho fresher không?",
+    "expect_tool": true,
+    "must_contain": [
+      [
+        "data engineer",
+        "data"
+      ],
+      [
+        "ha noi"
+      ],
+      [
+        "fresher",
+        "moi ra truong",
+        "0 nam",
+        "khong yeu cau kinh nghiem",
+        "it kinh nghiem",
+        "junior"
+      ]
+    ]
+  },
+  {
+    "id": "follow-job-reference",
+    "history": [
+      {
+        "role": "user",
+        "content": "tìm job AI Engineer"
+      },
+      {
+        "role": "assistant",
+        "content": "Hợp nhất là job 12 (AI Engineer) và job 30 (ML Engineer).",
+        "lookups": [
+          "tìm job AI Engineer"
+        ]
+      }
+    ],
+    "message": "job đầu tiên yêu cầu những skill gì?",
+    "expect_tool": true,
+    "must_contain": [
+      [
+        "12",
+        "ai engineer"
+      ],
+      [
+        "skill",
+        "ky nang",
+        "yeu cau"
+      ]
+    ]
+  },
+  {
+    "id": "follow-pronoun-company",
+    "history": [
+      {
+        "role": "user",
+        "content": "công ty nào tuyển nhiều job AI nhất?"
+      },
+      {
+        "role": "assistant",
+        "content": "FPT Software tuyển nhiều nhất với 9 job AI.",
+        "lookups": [
+          "công ty nào tuyển nhiều job AI nhất?"
+        ]
+      }
+    ],
+    "message": "họ tuyển ở những thành phố nào?",
+    "expect_tool": true,
+    "must_contain": [
+      [
+        "fpt"
+      ],
+      [
+        "thanh pho",
+        "dia diem",
+        "location",
+        "noi",
+        "o dau",
+        "tinh"
+      ]
+    ]
+  },
+  {
+    "id": "follow-no-reused-numbers",
+    "history": [
+      {
+        "role": "user",
+        "content": "có bao nhiêu job AI ở Hà Nội?"
+      },
+      {
+        "role": "assistant",
+        "content": "Có 20 job AI ở Hà Nội.",
+        "lookups": [
+          "có bao nhiêu job AI ở Hà Nội?"
+        ]
+      },
+      {
+        "role": "user",
+        "content": "còn ở HCM?"
+      },
+      {
+        "role": "assistant",
+        "content": "Có 37 job AI ở Hồ Chí Minh.",
+        "lookups": [
+          "còn ở HCM?"
+        ]
+      }
+    ],
+    "message": "vậy cả nước có tổng bao nhiêu job AI?",
+    "expect_tool": true,
+    "must_contain": [
+      [
+        "ai"
+      ],
+      [
+        "bao nhieu",
+        "tong",
+        "so luong",
+        "count"
+      ]
+    ]
+  },
+  {
+    "id": "follow-after-greeting",
+    "history": [
+      {
+        "role": "user",
+        "content": "chào bạn"
+      },
+      {
+        "role": "assistant",
+        "content": "Chào bạn! Mình giúp tìm job và thống kê thị trường IT."
+      }
+    ],
+    "message": "mình biết React, có job frontend nào remote không?",
+    "expect_tool": true,
+    "must_contain": [
+      [
+        "react",
+        "frontend"
+      ],
+      [
+        "remote",
+        "tu xa"
+      ]
+    ]
+  },
+  {
+    "id": "follow-thanks-plus-question",
+    "history": [
+      {
+        "role": "user",
+        "content": "có bao nhiêu job DevOps?"
+      },
+      {
+        "role": "assistant",
+        "content": "Có 15 job DevOps.",
+        "lookups": [
+          "có bao nhiêu job DevOps?"
+        ]
+      }
+    ],
+    "message": "cảm ơn, thế job DevOps thường cần skill gì?",
+    "expect_tool": true,
+    "must_contain": [
+      [
+        "devops"
+      ],
+      [
+        "skill",
+        "ky nang",
+        "yeu cau"
+      ]
+    ]
+  }
+]

@@ -124,18 +124,30 @@ async def on_message(message: cl.Message) -> None:
 
 async def _ask_agent(text: str) -> None:
     history = chat_history(cl.user_session.get("history") or [])
-    data, error = await api.chat(text, history)
+    # One parent step for the whole turn: it spins while the API works, then lists the
+    # data lookups the chat model made (route, SQL) as child steps.
+    async with cl.Step(name="Trợ lý", type="run") as turn:
+        turn.input = text
+        data, error = await api.chat(text, history)
+        if data:
+            runs = data.get("tool_runs") or []
+            for run in runs:
+                async with cl.Step(name="Tra dữ liệu", type="tool") as step:
+                    step.input = run["question"]
+                    step.output = f"route: {run['route']} · {run.get('latency_ms', 0) / 1000:.1f}s"
+                if run.get("sql_result"):
+                    async with cl.Step(name="SQL do LLM viết", type="tool", language="sql") as step:
+                        step.output = run["sql_result"]["sql"]
+            lookups = f"{len(runs)} lần tra dữ liệu" if runs else "trả lời trực tiếp"
+            turn.output = (
+                f"{lookups} · {data.get('llm_calls', 0)} lượt gọi model · "
+                f"{data.get('latency_ms', 0) / 1000:.1f}s"
+            )
+        else:
+            turn.output = error
     if error:
         await _say(f"❌ {error}")
         return
-    # One step per data lookup the chat model made, so the routing stays visible.
-    for run in data.get("tool_runs") or []:
-        async with cl.Step(name="Tra dữ liệu", type="tool") as step:
-            step.input = run["question"]
-            step.output = f"route: {run['route']} · {run.get('latency_ms', 0) / 1000:.1f}s"
-        if run.get("sql_result"):
-            async with cl.Step(name="SQL do LLM viết", type="tool", language="sql") as step:
-                step.output = run["sql_result"]["sql"]
     await _say(render.chat_answer(data))
     _remember(text, {"role": "assistant", "kind": "chat", "data": data})
 

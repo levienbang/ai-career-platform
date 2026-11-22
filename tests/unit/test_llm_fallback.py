@@ -128,14 +128,29 @@ def test_healthy_deepseek_never_calls_bedrock(deepseek, backup) -> None:
     assert llm_fallbacks.snapshot() == {}
 
 
-def test_configuration_errors_do_not_fall_back(deepseek, backup) -> None:
-    deepseek["behaviour"] = raise_(
-        openai.AuthenticationError(
-            "bad key", response=httpx.Response(401, request=REQUEST), body=None
-        )
-    )
+@pytest.mark.parametrize(
+    ("status", "error_type"),
+    [
+        (401, openai.AuthenticationError),  # revoked key
+        (402, openai.APIStatusError),  # DeepSeek: insufficient balance
+        (403, openai.PermissionDeniedError),  # credit used up, account blocked
+    ],
+)
+def test_account_errors_also_fall_back(deepseek, backup, caplog, status, error_type) -> None:
+    error = error_type("no", response=httpx.Response(status, request=REQUEST), body=None)
+    deepseek["behaviour"] = raise_(error)
 
-    with pytest.raises(openai.AuthenticationError):
+    result = build(settings(llm_fallback="bedrock")).invoke(PROMPT.invoke({"q": "x"}))
+
+    assert result == SQL_ROUTE
+    assert error_type.__name__ in caplog.text  # the cause stays visible in the log
+    assert llm_fallbacks.snapshot() == {"bedrock": 1}
+
+
+def test_other_errors_are_not_hidden(deepseek, backup) -> None:
+    deepseek["behaviour"] = raise_(KeyError("bug in our code"))
+
+    with pytest.raises(KeyError):
         build(settings(llm_fallback="bedrock")).invoke(PROMPT.invoke({"q": "x"}))
     assert backup.calls == []
 
@@ -230,8 +245,17 @@ def tool_models(monkeypatch, deepseek_model, bedrock_model):
     llm_fallbacks.reset()
 
 
-def test_chat_uses_qwen_first_and_falls_back_to_deepseek(monkeypatch) -> None:
-    qwen = FakeToolModel(error=openai.APITimeoutError(request=REQUEST))
+@pytest.mark.parametrize(
+    "error",
+    [
+        openai.APITimeoutError(request=REQUEST),
+        openai.PermissionDeniedError(
+            "credit used up", response=httpx.Response(403, request=REQUEST), body=None
+        ),
+    ],
+)
+def test_chat_uses_qwen_first_and_falls_back_to_deepseek(monkeypatch, error) -> None:
+    qwen = FakeToolModel(error=error)
     deepseek = FakeToolModel(reply="from deepseek")
     tool_models(monkeypatch, deepseek, qwen)
 
