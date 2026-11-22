@@ -11,6 +11,8 @@ Guards against made-up answers:
 - At most ``MAX_TOOL_CALLS`` tool calls per turn; after that the model must answer.
 - Every job ID the reply mentions must be in this turn's tool results; any other ID is
   reported in ``warnings``.
+- A reply that states numbers before any tool ran this turn is sent back once with a
+  reminder to call the tool; if the model still answers without it, a warning says so.
 - If the chat model fails after a tool ran, the agent's template answer is returned.
 """
 
@@ -42,6 +44,13 @@ CHARS_PER_TOKEN = 3  # rough for Vietnamese and English; used only to trim histo
 EVIDENCE_ROWS = 20
 EVIDENCE_SKILLS = 8
 JOB_ID_PATTERN = re.compile(r"\b(?:job|id)\s*[#:_-]?\s*(\d+)\b", re.IGNORECASE)
+DIGIT_PATTERN = re.compile(r"\d")
+LOOKUP_REMINDER = (
+    "Check: your reply states numbers, but no tool ran in this turn. Numbers and job "
+    "facts must come from query_job_data. Call the tool now with a standalone question."
+)
+UNCHECKED_WARNING = "Câu trả lời có số liệu nhưng không tra dữ liệu ở lượt này."
+REMOVED_RESULT = "Result from an earlier turn, removed. Call the tool again for current data."
 
 SYSTEM_PROMPT = """
 You are the assistant of an IT job platform for Vietnam. You help people find jobs and
@@ -52,7 +61,14 @@ Tool use:
   query_job_data. Write its question as one standalone question in the user's language,
   resolving references to earlier turns ("còn ở Hà Nội thì sao?" -> the full question).
 - Call the tool again for every new data question, even if an earlier turn covered a
-  similar topic. Never reuse numbers or jobs from earlier replies.
+  similar topic. Never reuse numbers or jobs from earlier replies. Short follow-ups
+  ("thế còn Golang?", "họ tuyển ở đâu?", "tổng cộng bao nhiêu?") are data questions too.
+- Never write a number, count or job fact unless it came from a tool result in this turn.
+- Earlier turns show their tool calls with the results removed: those answers came from
+  lookups, and their data is gone now, so look it up again.
+- Stay in this role. Politely decline requests unrelated to jobs, careers or the job
+  market (writing code, homework, general chat) in one or two sentences, and say what
+  you can help with instead.
 - Greetings, thanks and questions about what you can do need no tool. You can: find
   jobs by meaning, count and compare jobs, list common skills, and (in the chat UI)
   match an attached CV to jobs.
@@ -87,6 +103,8 @@ class CareerAgentLike(Protocol):
 class ChatTurn(BaseModel):
     role: Literal["user", "assistant"]
     content: str = Field(min_length=1, max_length=TURN_CHARS)
+    # Questions this (assistant) turn sent to query_job_data; replayed as tool calls.
+    lookups: list[str] = Field(default_factory=list, max_length=MAX_TOOL_CALLS)
 
 
 class ChatRunResult(BaseModel):
@@ -110,6 +128,7 @@ class ChatState(TypedDict, total=False):
     llm_calls: int
     context_tokens: int
     tokens_used: int
+    unchecked_numbers: bool
 
 
 def job_data_tool() -> StructuredTool:
@@ -161,24 +180,44 @@ def estimate_tokens(text: str) -> int:
     return len(text) // CHARS_PER_TOKEN + 4
 
 
+def turn_messages(turn: ChatTurn, index: int) -> list[BaseMessage]:
+    """One earlier turn; an assistant turn's lookups become tool calls without results."""
+    content = turn.content[:TURN_CHARS]
+    if turn.role == "user":
+        return [HumanMessage(content)]
+    if not turn.lookups:
+        return [AIMessage(content)]
+    calls = [
+        {"name": "query_job_data", "args": {"question": question[:500]}, "id": f"h{index}_{n}"}
+        for n, question in enumerate(turn.lookups)
+    ]
+    removed = [ToolMessage(REMOVED_RESULT, tool_call_id=call["id"]) for call in calls]
+    return [AIMessage(content="", tool_calls=calls), *removed, AIMessage(content)]
+
+
 def history_messages(
     history: list[ChatTurn], budget_tokens: int = CONTEXT_TOKENS - RESERVED_TOKENS
 ) -> tuple[list[BaseMessage], int]:
-    """Newest turns that fit ``budget_tokens``, as plain text; returns (messages, dropped).
+    """Newest turns that fit ``budget_tokens``; returns (messages, dropped turns).
 
-    Tool results from earlier turns are never carried over, only what was said.
+    Tool results from earlier turns are never carried over, only what was said and
+    which questions were looked up.
     """
-    kept: list[BaseMessage] = []
+    kept: list[list[BaseMessage]] = []
     used = 0
-    for turn in reversed(history):
-        content = turn.content[:TURN_CHARS]
-        cost = estimate_tokens(content)
+    for index in range(len(history) - 1, -1, -1):
+        turn = history[index]
+        messages = turn_messages(turn, index)
+        cost = sum(estimate_tokens(str(m.content)) for m in messages)
+        cost += sum(
+            estimate_tokens(q) + len(REMOVED_RESULT) // CHARS_PER_TOKEN for q in turn.lookups
+        )
         if used + cost > budget_tokens:
             break
         used += cost
-        kept.append(HumanMessage(content) if turn.role == "user" else AIMessage(content))
+        kept.append(messages)
     kept.reverse()
-    return kept, len(history) - len(kept)
+    return [m for messages in kept for m in messages], len(history) - len(kept)
 
 
 def _usage(message: BaseMessage) -> tuple[int, int]:
@@ -201,6 +240,15 @@ def _text(message: BaseMessage) -> str:
     return message.text.strip() if isinstance(message.text, str) else ""
 
 
+def states_unchecked_numbers(reply: BaseMessage, tool_calls_done: int) -> bool:
+    """A final reply with digits although no tool ran this turn: likely made-up data."""
+    return (
+        tool_calls_done == 0
+        and not getattr(reply, "tool_calls", None)
+        and bool(DIGIT_PATTERN.search(_text(reply)))
+    )
+
+
 class CareerChatbot:
     def __init__(
         self,
@@ -219,16 +267,37 @@ class CareerChatbot:
         self.context_tokens = context_tokens
         self.graph = self._build_graph()
 
+    def model_turn(
+        self, messages: list[BaseMessage], tool_calls_done: int = 0
+    ) -> tuple[BaseMessage, list[BaseMessage]]:
+        """One model step: (reply to keep, every reply received, for usage counting).
+
+        A reply with numbers before any lookup is retried once with LOOKUP_REMINDER.
+        """
+        if tool_calls_done >= self.max_tool_calls:
+            reply = self.answer_model.invoke(messages)
+            return reply, [reply]
+        reply = self.model.invoke(messages)
+        if not states_unchecked_numbers(reply, tool_calls_done):
+            return reply, [reply]
+        retry = self.model.invoke([*messages, reply, HumanMessage(LOOKUP_REMINDER)])
+        return retry, [reply, retry]
+
     def _build_graph(self):
         def call_model(state: ChatState) -> ChatState:
-            model = self.answer_model if state["tool_calls"] >= self.max_tool_calls else self.model
-            reply = model.invoke(state["messages"])
-            prompt_tokens, reply_tokens = _usage(reply)
+            reply, received = self.model_turn(state["messages"], state["tool_calls"])
+            prompt_tokens = state["context_tokens"]
+            tokens_used = state["tokens_used"]
+            for message in received:
+                sent, replied = _usage(message)
+                prompt_tokens = sent or prompt_tokens
+                tokens_used += sent + replied
             return {
                 "messages": [*state["messages"], reply],
-                "llm_calls": state["llm_calls"] + 1,
-                "context_tokens": prompt_tokens or state["context_tokens"],
-                "tokens_used": state["tokens_used"] + prompt_tokens + reply_tokens,
+                "llm_calls": state["llm_calls"] + len(received),
+                "context_tokens": prompt_tokens,
+                "tokens_used": tokens_used,
+                "unchecked_numbers": states_unchecked_numbers(reply, state["tool_calls"]),
             }
 
         def run_tools(state: ChatState) -> ChatState:
@@ -278,6 +347,7 @@ class CareerChatbot:
             "llm_calls": 0,
             "context_tokens": 0,
             "tokens_used": 0,
+            "unchecked_numbers": False,
         }
         warnings: list[str] = []
         try:
@@ -301,6 +371,8 @@ class CareerChatbot:
         runs = state.get("tool_runs") or []
         if not answer:
             answer = runs[-1].answer if runs else "Xin lỗi, mình chưa trả lời được câu này."
+        if state.get("unchecked_numbers"):
+            warnings.append(UNCHECKED_WARNING)
         if unknown := ungrounded_job_ids(answer, runs):
             warnings.append(
                 "Câu trả lời nhắc job không có trong dữ liệu tra được: "

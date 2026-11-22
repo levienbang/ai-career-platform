@@ -237,3 +237,58 @@ def test_evidence_keeps_sql_rows() -> None:
         "route": "sql",
         "sql": {"columns": ["count"], "rows": [[37]], "row_count": 1},
     }
+
+
+def test_numbers_before_any_lookup_are_retried_with_a_reminder() -> None:
+    agent = FakeAgent(sql_run)
+    model = ScriptedModel(
+        AIMessage("Có 2 job Golang ở Đà Nẵng."),  # made up: no tool ran
+        tool_call("Có bao nhiêu job Golang ở Đà Nẵng?"),
+        AIMessage("Có 37 job."),
+    )
+
+    result = chatbot(model, agent).invoke("thế còn Golang?")
+
+    assert agent.questions == ["Có bao nhiêu job Golang ở Đà Nẵng?"]
+    assert "no tool ran" in model.inputs[1][-1].content
+    assert result.answer == "Có 37 job."
+    assert result.llm_calls == 3
+    assert result.warnings == []
+
+
+def test_numbers_kept_without_a_lookup_get_a_warning() -> None:
+    model = ScriptedModel(AIMessage("Có 2 job."), AIMessage("Vẫn là 2 job."))
+
+    result = chatbot(model).invoke("thế còn Golang?")
+
+    assert result.answer == "Vẫn là 2 job."
+    assert result.warnings == ["Câu trả lời có số liệu nhưng không tra dữ liệu ở lượt này."]
+
+
+def test_replies_without_numbers_are_not_retried() -> None:
+    model = ScriptedModel(AIMessage("Chào bạn!"))
+
+    result = chatbot(model).invoke("chào")
+
+    assert result.llm_calls == 1
+
+
+def test_earlier_lookups_are_replayed_as_tool_calls_without_results() -> None:
+    history = [
+        ChatTurn(role="user", content="có bao nhiêu job AI ở Hà Nội?"),
+        ChatTurn(role="assistant", content="Có 20 job.", lookups=["đếm job AI ở Hà Nội"]),
+    ]
+
+    messages, dropped = history_messages(history)
+
+    assert [type(m).__name__ for m in messages] == [
+        "HumanMessage",
+        "AIMessage",
+        "ToolMessage",
+        "AIMessage",
+    ]
+    assert messages[1].tool_calls[0]["args"] == {"question": "đếm job AI ở Hà Nội"}
+    assert messages[2].tool_call_id == messages[1].tool_calls[0]["id"]
+    assert "20" not in messages[2].content  # old data stays out
+    assert messages[3].content == "Có 20 job."
+    assert dropped == 0

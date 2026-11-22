@@ -170,7 +170,9 @@ query. `evaluation/evaluate_judge.py` repeats this with an LLM judge at scale.
 - **Evaluation beyond silver labels.** An LLM judge grades pooled (query, job) pairs 0/1/2 for
   judged precision/nDCG and Cohen's kappa against the rule-based labels, with a blind 30-pair human
   sheet.
-- **467 offline tests** in CI (fake LLM/embeddings, SQLite, in-memory Qdrant) — no keys, no cost.
+- **Chat eval that found a real hallucination.** Short follow-ups ("thế còn Golang?") made the
+  chat model invent counts in 3 of 16 cases; replaying earlier lookups as tool calls fixed it (16/16).
+- **486 offline tests** in CI (fake LLM/embeddings, SQLite, in-memory Qdrant) — no keys, no cost.
 
 ---
 

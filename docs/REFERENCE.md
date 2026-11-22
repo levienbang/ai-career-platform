@@ -217,8 +217,9 @@ use Google. Timeouts and retries still apply per component.
 
 ### Chat (`POST /agent/chat`)
 
-The chat UI calls `/agent/chat` with the message and the last turns as plain text
-(`{"message": ..., "history": [{"role": "user"|"assistant", "content": ...}]}`). A chat
+The chat UI calls `/agent/chat` with the message and the last turns as text
+(`{"message": ..., "history": [{"role": "user"|"assistant", "content": ..., "lookups": [...]}]}`;
+`lookups` lists the questions an assistant turn sent to the tool). A chat
 model (`app/graph/chatbot.py`, a small LangGraph loop) either answers directly
 (greetings, what the assistant can do) or calls one tool, `query_job_data`, which runs
 the agent above (`/agent/query`: router → SQL / search) on a standalone question it
@@ -238,7 +239,8 @@ Guards against made-up answers:
 
 | Guard | How |
 |---|---|
-| Data only from this turn | Earlier turns are sent back as text only, so a follow-up question calls the tool again instead of reusing remembered numbers |
+| Data only from this turn | Earlier turns keep their text, and their lookups are replayed as tool calls whose result reads "removed, call the tool again". Old data is never resent, and the model sees that earlier answers came from lookups, so a follow-up calls the tool again |
+| Numbers need a lookup | A reply with digits before any tool ran this turn is sent back once with a reminder to call the tool; if it still answers without one, `warnings` says so |
 | History by token budget | `CHAT_CONTEXT_TOKENS` (default 100000) per chat model call; 12K is kept free for the system prompt, tool results and the reply, and the oldest turns are dropped to fit (estimated at 3 characters per token). Each turn is capped at 8000 characters |
 | Bounded loop | At most 3 tool calls per turn; then a model without tools must answer |
 | Job IDs checked | A job ID in the reply that is not in this turn's results is listed in `warnings` |
@@ -247,6 +249,24 @@ Guards against made-up answers:
 
 One chat turn costs one paid-call slot in the limiter but can make several model calls:
 two chat calls plus the agent's router and SQL/rerank calls for a data question.
+
+**Chat evaluation** (`python -m evaluation.evaluate_chat`, 16 cases in
+`evaluation/chat_cases.json`, results in `chat_results.json`) scores the chat model's own
+two decisions without a judge: whether it calls the tool (no for greetings, thanks,
+capability and off-topic messages; yes for data questions and short follow-ups), and
+whether the standalone question keeps what the follow-up refers to (keyword groups,
+matched without accents). Only the first model step runs, so a case costs one or two
+Qwen calls and no agent calls. With Qwen3 235B:
+
+| History sent to the model | Tool decision, first reply | After the numbers guard | Rewrites |
+|---|---|---|---|
+| Text only | 13/16 (invented "Có 2 job Golang ở Đà Nẵng", a total of "102 job AI", a city list) | 15/16 | 11/11 |
+| Text with a `[looked up ...]` marker | 13/16 (copied the marker into the reply instead of calling the tool) | 16/16 (3 retries) | 11/12 |
+| Lookups replayed as tool calls, results removed | **16/16** (two runs) | 16/16, no retries | 12/12 |
+
+The model imitates the pattern in its context: earlier answers that look like plain text
+teach it to answer follow-ups from memory, while real tool calls teach it to look up.
+Median decision latency is 0.9 s, p95 2.1 s.
 
 ### Backup model (Qwen on Amazon Bedrock)
 
@@ -263,9 +283,11 @@ which wraps the DeepSeek runnable with LangChain's `with_fallbacks`. The backup 
 LangChain's `ChatOpenAI` pointed at Bedrock's OpenAI-compatible Mantle API
 (`https://bedrock-mantle.<region>.api.aws/v1`, model list at `GET /v1/models`), with
 `with_structured_output(<schema>)`, so it returns the same Pydantic object and callers
-do not change. It runs only when DeepSeek fails at runtime: connection error or
-timeout, 429, 5xx, or output that does not parse. A bad key, a 400 or a 404 is a
-configuration problem and still fails loudly. With a backup, DeepSeek retries once
+do not change. It runs when DeepSeek's API returns any error: connection error or timeout, 429,
+5xx, but also 401/402/403 (a revoked key, no balance left, credit used up), and when
+the output does not parse. The other provider can still answer in all of these cases.
+Each failure is logged with its error type and counted in the admin stats, so a broken
+key is still visible; a missing key fails when the model is built. With a backup, DeepSeek retries once
 instead of `LLM_MAX_RETRIES` times, so a failing provider is left quickly. The backup
 client is created when the model is built but makes no request until DeepSeek fails.
 

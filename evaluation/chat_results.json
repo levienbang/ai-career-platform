@@ -1,0 +1,295 @@
+{
+  "chat_provider": "bedrock",
+  "case_count": 16,
+  "first_reply_tool_accuracy": 1,
+  "tool_decision_accuracy": 1,
+  "retries": 0,
+  "rewrite_accuracy": 1,
+  "rewrite_count": 12,
+  "all_correct": 1,
+  "median_latency_ms": 941.5,
+  "p95_latency_ms": 2009,
+  "cases": [
+    {
+      "id": "no-tool-greeting",
+      "message": "chào bạn",
+      "expect_tool": false,
+      "called_tool": false,
+      "tool_questions": [],
+      "reply": "Chào bạn! Mình có thể giúp bạn tìm việc, tìm hiểu thị trường việc làm tại Việt Nam, hoặc so sánh cơ hội việc làm theo kỹ năng, công ty, hay địa điểm. Bạn cần hỗ trợ gì ạ?",
+      "first_reply": "Chào bạn! Mình có thể giúp bạn tìm việc, tìm hiểu thị trường việc làm tại Việt Nam, hoặc so sánh cơ hội việc làm theo kỹ năng, công ty, hay địa điểm. Bạn cần hỗ trợ gì ạ?",
+      "retried": false,
+      "first_reply_tool_correct": true,
+      "tool_correct": true,
+      "rewrite_correct": null,
+      "problems": [],
+      "latency_ms": 2009,
+      "error": null
+    },
+    {
+      "id": "no-tool-thanks",
+      "message": "ok cảm ơn nha",
+      "expect_tool": false,
+      "called_tool": false,
+      "tool_questions": [],
+      "reply": "Không có gì! Nếu bạn cần tìm thêm thông tin về các công việc khác, kỹ năng phổ biến hay công ty tuyển dụng, cứ hỏi mình nhé!",
+      "first_reply": "Không có gì! Nếu bạn cần tìm thêm thông tin về các công việc khác, kỹ năng phổ biến hay công ty tuyển dụng, cứ hỏi mình nhé!",
+      "retried": false,
+      "first_reply_tool_correct": true,
+      "tool_correct": true,
+      "rewrite_correct": null,
+      "problems": [],
+      "latency_ms": 778,
+      "error": null
+    },
+    {
+      "id": "no-tool-capabilities",
+      "message": "bạn làm được những gì?",
+      "expect_tool": false,
+      "called_tool": false,
+      "tool_questions": [],
+      "reply": "Tôi có thể giúp bạn tìm việc làm, tìm hiểu thị trường lao động công nghệ tại Việt Nam dựa trên dữ liệu từ nền tảng tuyển dụng. Cụ thể, tôi có thể:\n\n- Tìm kiếm công việc theo kỹ năng, vị trí, công ty, địa điểm.\n- Đếm số lượng công việc theo yêu cầu (ví dụ: bao nhiêu việc tuyển Python ở Hà Nội?).\n- Ph",
+      "first_reply": "Tôi có thể giúp bạn tìm việc làm, tìm hiểu thị trường lao động công nghệ tại Việt Nam dựa trên dữ liệu từ nền tảng tuyển dụng. Cụ thể, tôi có thể:\n\n- Tìm kiếm công việc theo kỹ năng, vị trí, công ty, địa điểm.\n- Đếm số lượng công việc theo yêu cầu (ví dụ: bao nhiêu việc tuyển Python ở Hà Nội?).\n- Ph",
+      "retried": false,
+      "first_reply_tool_correct": true,
+      "tool_correct": true,
+      "rewrite_correct": null,
+      "problems": [],
+      "latency_ms": 2357,
+      "error": null
+    },
+    {
+      "id": "no-tool-off-topic",
+      "message": "viết giúp tôi code python in ra hello world",
+      "expect_tool": false,
+      "called_tool": false,
+      "tool_questions": [],
+      "reply": "Tôi không thể giúp viết code Python hoặc các nhiệm vụ lập trình khác. Tôi là trợ lý hỗ trợ tìm việc và cung cấp thông tin về thị trường lao động công nghệ tại Việt Nam. Nếu bạn cần tìm việc, phân tích kỹ năng, hoặc tìm hiểu về các công việc liên quan đến Python, tôi rất sẵn lòng giúp!",
+      "first_reply": "Tôi không thể giúp viết code Python hoặc các nhiệm vụ lập trình khác. Tôi là trợ lý hỗ trợ tìm việc và cung cấp thông tin về thị trường lao động công nghệ tại Việt Nam. Nếu bạn cần tìm việc, phân tích kỹ năng, hoặc tìm hiểu về các công việc liên quan đến Python, tôi rất sẵn lòng giúp!",
+      "retried": false,
+      "first_reply_tool_correct": true,
+      "tool_correct": true,
+      "rewrite_correct": null,
+      "problems": [],
+      "latency_ms": 1468,
+      "error": null
+    },
+    {
+      "id": "direct-count",
+      "message": "có bao nhiêu job Python ở Hồ Chí Minh?",
+      "expect_tool": true,
+      "called_tool": true,
+      "tool_questions": [
+        "có bao nhiêu job Python ở Hồ Chí Minh"
+      ],
+      "reply": null,
+      "first_reply": null,
+      "retried": false,
+      "first_reply_tool_correct": true,
+      "tool_correct": true,
+      "rewrite_correct": true,
+      "problems": [],
+      "latency_ms": 745,
+      "error": null
+    },
+    {
+      "id": "direct-search",
+      "message": "tìm job AI cho fresher",
+      "expect_tool": true,
+      "called_tool": true,
+      "tool_questions": [
+        "tìm job AI cho fresher"
+      ],
+      "reply": null,
+      "first_reply": null,
+      "retried": false,
+      "first_reply_tool_correct": true,
+      "tool_correct": true,
+      "rewrite_correct": true,
+      "problems": [],
+      "latency_ms": 630,
+      "error": null
+    },
+    {
+      "id": "direct-top-skills",
+      "message": "skill nào được yêu cầu nhiều nhất trong các job data?",
+      "expect_tool": true,
+      "called_tool": true,
+      "tool_questions": [
+        "skill nào được yêu cầu nhiều nhất trong các job data"
+      ],
+      "reply": null,
+      "first_reply": null,
+      "retried": false,
+      "first_reply_tool_correct": true,
+      "tool_correct": true,
+      "rewrite_correct": true,
+      "problems": [],
+      "latency_ms": 1010,
+      "error": null
+    },
+    {
+      "id": "direct-company",
+      "message": "công ty nào tuyển nhiều job backend nhất?",
+      "expect_tool": true,
+      "called_tool": true,
+      "tool_questions": [
+        "công ty nào tuyển nhiều việc làm backend nhất, cho biết số lượng"
+      ],
+      "reply": null,
+      "first_reply": null,
+      "retried": false,
+      "first_reply_tool_correct": true,
+      "tool_correct": true,
+      "rewrite_correct": true,
+      "problems": [],
+      "latency_ms": 957,
+      "error": null
+    },
+    {
+      "id": "follow-location",
+      "message": "còn ở HCM thì sao?",
+      "expect_tool": true,
+      "called_tool": true,
+      "tool_questions": [
+        "có bao nhiêu job AI ở TP.HCM?"
+      ],
+      "reply": null,
+      "first_reply": null,
+      "retried": false,
+      "first_reply_tool_correct": true,
+      "tool_correct": true,
+      "rewrite_correct": true,
+      "problems": [],
+      "latency_ms": 1110,
+      "error": null
+    },
+    {
+      "id": "follow-skill",
+      "message": "thế còn Golang?",
+      "expect_tool": true,
+      "called_tool": true,
+      "tool_questions": [
+        "có bao nhiêu job Golang ở Đà Nẵng?"
+      ],
+      "reply": null,
+      "first_reply": null,
+      "retried": false,
+      "first_reply_tool_correct": true,
+      "tool_correct": true,
+      "rewrite_correct": true,
+      "problems": [],
+      "latency_ms": 1217,
+      "error": null
+    },
+    {
+      "id": "follow-level",
+      "message": "có cái nào cho fresher không?",
+      "expect_tool": true,
+      "called_tool": true,
+      "tool_questions": [
+        "tìm job Data Engineer ở Hà Nội cho fresher"
+      ],
+      "reply": null,
+      "first_reply": null,
+      "retried": false,
+      "first_reply_tool_correct": true,
+      "tool_correct": true,
+      "rewrite_correct": true,
+      "problems": [],
+      "latency_ms": 807,
+      "error": null
+    },
+    {
+      "id": "follow-job-reference",
+      "message": "job đầu tiên yêu cầu những skill gì?",
+      "expect_tool": true,
+      "called_tool": true,
+      "tool_questions": [
+        "job 12 (AI Engineer) yêu cầu những skill gì?"
+      ],
+      "reply": null,
+      "first_reply": null,
+      "retried": false,
+      "first_reply_tool_correct": true,
+      "tool_correct": true,
+      "rewrite_correct": true,
+      "problems": [],
+      "latency_ms": 824,
+      "error": null
+    },
+    {
+      "id": "follow-pronoun-company",
+      "message": "họ tuyển ở những thành phố nào?",
+      "expect_tool": true,
+      "called_tool": true,
+      "tool_questions": [
+        "FPT Software tuyển job AI ở những thành phố nào?"
+      ],
+      "reply": null,
+      "first_reply": null,
+      "retried": false,
+      "first_reply_tool_correct": true,
+      "tool_correct": true,
+      "rewrite_correct": true,
+      "problems": [],
+      "latency_ms": 926,
+      "error": null
+    },
+    {
+      "id": "follow-no-reused-numbers",
+      "message": "vậy cả nước có tổng bao nhiêu job AI?",
+      "expect_tool": true,
+      "called_tool": true,
+      "tool_questions": [
+        "vậy cả nước có tổng bao nhiêu job AI?"
+      ],
+      "reply": null,
+      "first_reply": null,
+      "retried": false,
+      "first_reply_tool_correct": true,
+      "tool_correct": true,
+      "rewrite_correct": true,
+      "problems": [],
+      "latency_ms": 963,
+      "error": null
+    },
+    {
+      "id": "follow-after-greeting",
+      "message": "mình biết React, có job frontend nào remote không?",
+      "expect_tool": true,
+      "called_tool": true,
+      "tool_questions": [
+        "các job frontend remote cho người biết React"
+      ],
+      "reply": null,
+      "first_reply": null,
+      "retried": false,
+      "first_reply_tool_correct": true,
+      "tool_correct": true,
+      "rewrite_correct": true,
+      "problems": [],
+      "latency_ms": 830,
+      "error": null
+    },
+    {
+      "id": "follow-thanks-plus-question",
+      "message": "cảm ơn, thế job DevOps thường cần skill gì?",
+      "expect_tool": true,
+      "called_tool": true,
+      "tool_questions": [
+        "job DevOps thường cần skill gì?"
+      ],
+      "reply": null,
+      "first_reply": null,
+      "retried": false,
+      "first_reply_tool_correct": true,
+      "tool_correct": true,
+      "rewrite_correct": true,
+      "problems": [],
+      "latency_ms": 559,
+      "error": null
+    }
+  ],
+  "chat_model": "qwen.qwen3-235b-a22b-2507"
+}
