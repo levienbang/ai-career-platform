@@ -1,10 +1,13 @@
-"""Fold recent chat turns into the single question string sent to /agent/query.
+"""Turn the chat session's messages into the plain-text history sent to /agent/chat.
 
-Moved here from the Streamlit demo, which this chat replaces.
+Only text goes back to the API: earlier tool results are summarised, never resent as
+data, so a follow-up question makes the chat model look the data up again.
 """
 
-MAX_QUERY_CHARS = 500  # NaturalLanguageQuery.question limit in the API
-HISTORY_TURNS = 5
+# The API trims history to its token budget (CHAT_CONTEXT_TOKENS); these caps only
+# keep the request within the API's limits.
+HISTORY_TURNS = 400
+MAX_TURN_CHARS = 8000
 
 
 def _short(text: str, limit: int) -> str:
@@ -20,6 +23,8 @@ def summarize(message: dict) -> str | None:
     data = message.get("data") or {}
     if kind == "text":
         return message.get("content", "").replace("📎", "CV:").strip() or None
+    if kind == "chat":
+        return data.get("answer")
     if kind == "agent":
         jobs = [job["title"] for job in (data.get("search_result") or {}).get("jobs", [])]
         if jobs:
@@ -38,24 +43,11 @@ def summarize(message: dict) -> str | None:
     return None
 
 
-def build_query(question: str, messages: list[dict]) -> str:
-    """Prefix up to five recent turns, trimmed so the result fits the API limit.
-
-    The current question is always kept whole; older context is dropped first.
-    """
-    question = _short(question, MAX_QUERY_CHARS)
-    lines = []
+def chat_history(messages: list[dict]) -> list[dict[str, str]]:
+    """The last turns as [{"role": "user"|"assistant", "content": text}]."""
+    history = []
     for message in messages[-HISTORY_TURNS:]:
         summary = summarize(message)
         if summary:
-            who = "Tôi" if message["role"] == "user" else "Trợ lý"
-            lines.append(f"- {who}: {_short(summary, 120)}")
-    suffix = f"Câu hỏi hiện tại: {question}"
-    if not lines or len(suffix) >= MAX_QUERY_CHARS:
-        return question
-    header = "Ngữ cảnh trước đó:\n"
-    while lines and len(header) + len("\n".join(lines)) + 1 + len(suffix) > MAX_QUERY_CHARS:
-        lines.pop(0)  # drop the oldest turn first
-    if not lines:
-        return question
-    return header + "\n".join(lines) + "\n" + suffix
+            history.append({"role": message["role"], "content": _short(summary, MAX_TURN_CHARS)})
+    return history

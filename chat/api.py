@@ -36,8 +36,8 @@ async def call(
     return response.json(), None
 
 
-async def ask_agent(question: str) -> tuple[Any | None, str | None]:
-    return await call("POST", "/agent/query", json={"question": question})
+async def chat(message: str, history: list[dict]) -> tuple[Any | None, str | None]:
+    return await call("POST", "/agent/chat", json={"message": message, "history": history})
 
 
 async def match_cv(name: str, content: bytes, limit: int = 10):

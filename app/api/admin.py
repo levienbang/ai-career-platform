@@ -18,9 +18,9 @@ from sqlalchemy.orm import Session
 from app.config import Settings, get_settings
 from app.db.models import Company, Job, Skill, SkillDecision
 from app.db.session import get_db
+from app.fallbacks import llm_fallbacks, reranker_fallbacks
 from app.llm import check_structured_output
 from app.retrieval.qdrant import build_qdrant_client
-from app.retrieval.reranker import reranker_fallbacks
 from app.security import AdminKey, paid_call_limiter
 from app.skills.review import approve_decision, keep_new_decision, revert_alias
 
@@ -39,6 +39,9 @@ class AdminStats(BaseModel):
     indexed_jobs: int | None = Field(description="Qdrant points; null if Qdrant is down")
     paid_calls_today: int = Field(description="Rate-limited paid requests since 00:00 UTC")
     reranker_fallbacks: dict[str, int] = Field(description="Since the API process started")
+    llm_fallbacks: dict[str, int] = Field(
+        default_factory=dict, description="DeepSeek calls served by the backup model"
+    )
 
 
 class SkillDecisionItem(BaseModel):
@@ -99,6 +102,7 @@ def stats(db: DbSession, settings: SettingsDependency) -> AdminStats:
         indexed_jobs=indexed,
         paid_calls_today=paid_call_limiter.calls_today(),
         reranker_fallbacks=reranker_fallbacks.snapshot(),
+        llm_fallbacks=llm_fallbacks.snapshot(),
     )
 
 

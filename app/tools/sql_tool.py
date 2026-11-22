@@ -55,23 +55,65 @@ ALLOWED_SCHEMA: dict[str, frozenset[str]] = {
     "job_skills": frozenset({"id", "job_id", "skill_id", "requirement_type"}),
 }
 
+# Pure functions over text, numbers, dates and rankings, named as sqlglot names them
+# (string_agg -> group_concat, to_char -> time_to_str, ~* -> regexp_i_like). Anything
+# sqlglot does not know parses as "anonymous" and stays blocked (pg_sleep, set_config,
+# pg_read_file, dblink, ...).
 SAFE_FUNCTIONS = frozenset(
     {
+        # aggregates
+        "array_agg",
         "avg",
-        "cast",
-        "coalesce",
         "count",
-        "current_date",
-        "date_trunc",
-        "extract",
-        "lower",
+        "group_concat",
+        "logical_and",
+        "logical_or",
         "max",
         "min",
-        "nullif",
-        "round",
+        "mode",
+        "percentile_cont",
+        "percentile_disc",
+        "stddev",
         "sum",
-        "timestamp_trunc",
+        # ranking (window functions)
+        "dense_rank",
+        "rank",
+        "row_number",
+        # conditionals
+        "case",
+        "coalesce",
+        "exists",
+        "greatest",
+        "if",
+        "least",
+        "nullif",
+        # numbers
+        "abs",
+        "cast",
+        "ceil",
+        "floor",
+        "round",
+        # text
+        "concat",
+        "left",
+        "length",
+        "lower",
+        "regexp_i_like",
+        "regexp_like",
+        "replace",
+        "right",
+        "split_part",
+        "str_position",
+        "substring",
+        "trim",
         "upper",
+        # dates
+        "current_date",
+        "current_timestamp",
+        "date_trunc",
+        "extract",
+        "time_to_str",
+        "timestamp_trunc",
     }
 )
 
@@ -185,7 +227,9 @@ class SQLSafetyValidator:
             raise SQLValidationError("Exactly one SQL statement is allowed")
 
         statement = statements[0]
-        if not isinstance(statement, exp.Select):
+        # UNION / INTERSECT / EXCEPT of SELECTs is read-only; every branch is walked by
+        # the table, column and function checks below.
+        if not isinstance(statement, exp.Select | exp.SetOperation):
             raise SQLValidationError("Only SELECT or WITH ... SELECT is allowed")
         if any(statement.find(node_type) for node_type in FORBIDDEN_EXPRESSIONS):
             raise SQLValidationError("Data-changing and administrative SQL is not allowed")
@@ -253,7 +297,7 @@ class SQLSafetyValidator:
         return statement.sql(dialect="postgres")
 
     @staticmethod
-    def _scope_to_jobs(statement: exp.Select, job_ids: list[int]) -> None:
+    def _scope_to_jobs(statement: exp.Query, job_ids: list[int]) -> None:
         ids = ", ".join(str(job_id) for job_id in job_ids)
         cte_names = {cte.alias_or_name.casefold() for cte in statement.find_all(exp.CTE)}
         physical_tables = [

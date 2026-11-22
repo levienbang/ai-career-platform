@@ -1,0 +1,180 @@
+{
+  "corpus": "941 real Crawl jobs (VietJobs IT + Fake Jobs) in the platform database",
+  "model": "qwen.qwen3-235b-a22b-2507",
+  "routing": {
+    "case_count": 12,
+    "accuracy": 1,
+    "success_rate": 1,
+    "median_latency_ms": 644.5,
+    "p95_latency_ms": 922,
+    "cases": [
+      {
+        "question": "Tìm job Computer Vision phù hợp fresher biết Python",
+        "expected_route": "search",
+        "actual_route": "search",
+        "correct": true,
+        "latency_ms": 1781,
+        "error": null
+      },
+      {
+        "question": "Tìm việc backend AI remote dùng FastAPI và PostgreSQL",
+        "expected_route": "search",
+        "actual_route": "search",
+        "correct": true,
+        "latency_ms": 654,
+        "error": null
+      },
+      {
+        "question": "Công việc nào gần với project phân tích ảnh và video của tôi?",
+        "expected_route": "search",
+        "actual_route": "search",
+        "correct": true,
+        "latency_ms": 623,
+        "error": null
+      },
+      {
+        "question": "Tìm internship AI có dùng Docker",
+        "expected_route": "search",
+        "actual_route": "search",
+        "correct": true,
+        "latency_ms": 635,
+        "error": null
+      },
+      {
+        "question": "Có tổng cộng bao nhiêu job?",
+        "expected_route": "sql",
+        "actual_route": "sql",
+        "correct": true,
+        "latency_ms": 597,
+        "error": null
+      },
+      {
+        "question": "Có bao nhiêu internship tại Ho Chi Minh City?",
+        "expected_route": "sql",
+        "actual_route": "sql",
+        "correct": true,
+        "latency_ms": 720,
+        "error": null
+      },
+      {
+        "question": "Kỹ năng nào xuất hiện thường xuyên nhất trong các job?",
+        "expected_route": "sql",
+        "actual_route": "sql",
+        "correct": true,
+        "latency_ms": 590,
+        "error": null
+      },
+      {
+        "question": "Đếm số job theo location",
+        "expected_route": "sql",
+        "actual_route": "sql",
+        "correct": true,
+        "latency_ms": 666,
+        "error": null
+      },
+      {
+        "question": "Bao nhiêu job yêu cầu Docker?",
+        "expected_route": "sql",
+        "actual_route": "sql",
+        "correct": true,
+        "latency_ms": 739,
+        "error": null
+      },
+      {
+        "question": "Tìm job Computer Vision cho fresher và cho biết tổng số job Computer Vision",
+        "expected_route": "both",
+        "actual_route": "both",
+        "correct": true,
+        "latency_ms": 461,
+        "error": null
+      },
+      {
+        "question": "Tìm internship AI phù hợp rồi thống kê kỹ năng phổ biến nhất",
+        "expected_route": "both",
+        "actual_route": "both",
+        "correct": true,
+        "latency_ms": 922,
+        "error": null
+      },
+      {
+        "question": "Tìm job remote dùng Python và đếm số job remote trong dữ liệu",
+        "expected_route": "both",
+        "actual_route": "both",
+        "correct": true,
+        "latency_ms": 468,
+        "error": null
+      }
+    ]
+  },
+  "sql": {
+    "accuracy": 0.4,
+    "cases": [
+      {
+        "id": "sql-01",
+        "question": "Có tổng cộng bao nhiêu job?",
+        "sql": "SELECT COUNT(*) AS total_jobs FROM jobs LIMIT 100",
+        "answer": [
+          [
+            1081
+          ]
+        ],
+        "correct": false,
+        "latency_ms": 1110,
+        "error": null
+      },
+      {
+        "id": "sql-02",
+        "question": "Có bao nhiêu job có kỹ năng Python?",
+        "sql": "SELECT COUNT(j.id) FROM jobs AS j LEFT JOIN job_skills AS js ON j.id = js.job_id LEFT JOIN skills AS s ON js.skill_id = s.id WHERE s.canonical_name = 'python' LIMIT 100",
+        "answer": [
+          [
+            0
+          ]
+        ],
+        "correct": false,
+        "latency_ms": 1373,
+        "error": null
+      },
+      {
+        "id": "sql-03",
+        "question": "Có bao nhiêu job thực tập?",
+        "sql": "SELECT COUNT(*) FROM jobs WHERE title ILIKE '%thực tập%' OR title ILIKE '%intern%' LIMIT 100",
+        "answer": [
+          [
+            46
+          ]
+        ],
+        "correct": false,
+        "latency_ms": 978,
+        "error": null
+      },
+      {
+        "id": "sql-04",
+        "question": "Có bao nhiêu job ở Đà Nẵng?",
+        "sql": "SELECT COUNT(*) FROM jobs WHERE location ILIKE '%đà nẵng%' LIMIT 100",
+        "answer": [
+          [
+            14
+          ]
+        ],
+        "correct": true,
+        "latency_ms": 700,
+        "error": null
+      },
+      {
+        "id": "sql-05",
+        "question": "Kỹ năng nào xuất hiện trong nhiều job nhất?",
+        "sql": "SELECT s.canonical_name, COUNT(js.job_id) AS skill_count FROM skills AS s JOIN job_skills AS js ON s.id = js.skill_id GROUP BY s.canonical_name ORDER BY skill_count DESC LIMIT 1",
+        "answer": [
+          [
+            "Python",
+            309
+          ]
+        ],
+        "correct": true,
+        "latency_ms": 979,
+        "error": null
+      }
+    ]
+  }
+}

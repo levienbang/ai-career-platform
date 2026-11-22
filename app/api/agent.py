@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.config import Settings, get_settings
 from app.db.session import get_db
 from app.graph.builder import CareerAgent
+from app.graph.chatbot import CareerChatbot, build_chatbot
 from app.graph.factory import build_career_agent
 from app.graph.router import (
     AgentRouterConfigurationError,
@@ -14,7 +15,14 @@ from app.graph.router import (
     QuestionRouter,
     build_question_router,
 )
-from app.schemas.agent import AgentResponse, AnalyticsResponse, NaturalLanguageQuery
+from app.llm import ChatModelConfigurationError
+from app.schemas.agent import (
+    AgentResponse,
+    AnalyticsResponse,
+    ChatRequest,
+    ChatResponse,
+    NaturalLanguageQuery,
+)
 from app.security import PaidCallLimit
 from app.tools.sql_tool import (
     SQLAnalyticsTool,
@@ -98,3 +106,34 @@ def agent_query(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(error)
         ) from error
+
+
+def get_chatbot(
+    agent: Annotated[CareerAgent, Depends(get_career_agent)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> CareerChatbot:
+    try:
+        return build_chatbot(agent, settings)
+    except ChatModelConfigurationError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(error)
+        ) from error
+
+
+@router.post("/agent/chat", response_model=ChatResponse, dependencies=[PaidCallLimit])
+def agent_chat(
+    request: ChatRequest,
+    chatbot: Annotated[CareerChatbot, Depends(get_chatbot)],
+) -> ChatResponse:
+    """One chat turn: the chat model answers directly or calls the agent for data.
+
+    The client sends the earlier turns as plain text; the API keeps no chat state.
+    """
+    try:
+        result = chatbot.invoke(request.message, request.history)
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Chat model failed ({type(error).__name__})",
+        ) from error
+    return ChatResponse(**result.model_dump())

@@ -10,6 +10,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
 from app.config import Settings
+from app.fallbacks import reranker_fallbacks
 from app.llm import (
     ChatModelConfigurationError,
     build_structured_chat_model,
@@ -297,29 +298,6 @@ cross_encoder_warmup = CrossEncoderWarmup()
 
 RerankerName = Literal["llm", "cross_encoder", "none"]
 _RUNTIME_ERRORS = (RerankerServiceError, RerankerResponseError)
-
-
-class FallbackCounter:
-    """Fallbacks since the API process started, keyed by what ran instead (admin stats)."""
-
-    def __init__(self) -> None:
-        self._lock = threading.Lock()
-        self._counts: dict[str, int] = {}
-
-    def record(self, used: str) -> None:
-        with self._lock:
-            self._counts[used] = self._counts.get(used, 0) + 1
-
-    def snapshot(self) -> dict[str, int]:
-        with self._lock:
-            return dict(self._counts)
-
-    def reset(self) -> None:
-        with self._lock:
-            self._counts.clear()
-
-
-reranker_fallbacks = FallbackCounter()
 
 
 class FallbackJobReranker:

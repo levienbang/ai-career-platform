@@ -1,5 +1,6 @@
-from app.api.agent import get_career_agent, get_sql_analytics_tool
+from app.api.agent import get_career_agent, get_chatbot, get_sql_analytics_tool
 from app.graph.builder import AgentRunResult
+from app.graph.chatbot import ChatRunResult
 from app.tools.sql_tool import SQLToolResult, SQLValidationError
 
 
@@ -61,5 +62,59 @@ def test_agent_api_validates_empty_question(client) -> None:
     client.app.dependency_overrides[get_career_agent] = lambda: FakeAgent()
 
     response = client.post("/agent/query", json={"question": ""})
+
+    assert response.status_code == 422
+
+
+class FakeChatbot:
+    def __init__(self, error: Exception | None = None) -> None:
+        self.error = error
+        self.calls: list = []
+
+    def invoke(self, message, history):
+        self.calls.append((message, [turn.role for turn in history]))
+        if self.error:
+            raise self.error
+        run = FakeAgent().invoke("Có bao nhiêu job?")
+        return ChatRunResult(answer="Có 4 job.", tool_runs=[run], llm_calls=2, latency_ms=3)
+
+
+def test_chat_api_passes_history_and_returns_tool_runs(client) -> None:
+    chatbot = FakeChatbot()
+    client.app.dependency_overrides[get_chatbot] = lambda: chatbot
+
+    response = client.post(
+        "/agent/chat",
+        json={
+            "message": "còn bao nhiêu job?",
+            "history": [
+                {"role": "user", "content": "chào"},
+                {"role": "assistant", "content": "Chào bạn!"},
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == "Có 4 job."
+    assert body["tool_runs"][0]["sql_result"]["rows"] == [[4]]
+    assert chatbot.calls == [("còn bao nhiêu job?", ["user", "assistant"])]
+
+
+def test_chat_api_reports_a_failed_chat_model(client) -> None:
+    client.app.dependency_overrides[get_chatbot] = lambda: FakeChatbot(TimeoutError("down"))
+
+    response = client.post("/agent/chat", json={"message": "chào"})
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Chat model failed (TimeoutError)"
+
+
+def test_chat_api_rejects_unknown_roles(client) -> None:
+    client.app.dependency_overrides[get_chatbot] = lambda: FakeChatbot()
+
+    response = client.post(
+        "/agent/chat", json={"message": "x", "history": [{"role": "system", "content": "y"}]}
+    )
 
     assert response.status_code == 422
